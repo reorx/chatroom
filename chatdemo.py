@@ -10,9 +10,6 @@ import tornado.web
 import os.path
 import uuid
 
-# import zipdb
-
-# DB = zipdb.ZipDB('tornadochat.zipdb')
 
 from tornado.options import define, options
 
@@ -41,7 +38,6 @@ class Application(tornado.web.Application):
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    # db = DB
 
     def get_current_user(self):
         user_json = self.get_secure_cookie("user")
@@ -53,7 +49,7 @@ class BaseHandler(tornado.web.RequestHandler):
 class MainHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        self.render("index.html", messages=MessageMixin.cache)
+        self.render("new_index.html", messages=MessageMixin.cache)
 
 
 class MessageMixin(object):
