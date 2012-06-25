@@ -24,6 +24,8 @@ class Application(tornado.web.Application):
             (r"/auth/logout", AuthLogoutHandler),
             (r"/a/message/new", MessageNewHandler),
             (r"/a/message/updates", MessageUpdatesHandler),
+            (r"/room", RoomHdr),
+            (r"/users/me", UsersMeHdr),
         ]
         settings = dict(
             cookie_secret="43oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
@@ -47,9 +49,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
 
 class MainHandler(BaseHandler):
-    @tornado.web.authenticated
     def get(self):
-        self.render("new_index.html", messages=MessageMixin.cache)
+        self.render("index.html", messages=MessageMixin.cache)
 
 
 class MessageMixin(object):
@@ -58,9 +59,18 @@ class MessageMixin(object):
     cache_size = 200
     online_users = set()
 
+    def get_online_users(self):
+        cls = MessageMixin
+        return [i.im_self.current_user for i in cls.waiters]
+
+    def is_online(self, username):
+        for i in self.get_online_users():
+            if i['username'] == username:
+                return True
+        return False
+
     def wait_for_messages(self, callback, cursor=None):
         cls = MessageMixin
-        cls.online_users.add(self.current_user['username'])
 
         if cursor:
             index = 0
@@ -76,7 +86,6 @@ class MessageMixin(object):
 
     def cancel_wait(self, callback):
         cls = MessageMixin
-        cls.online_users.remove(self.current_user['username'])
         cls.waiters.remove(callback)
 
     def new_messages(self, messages):
@@ -102,7 +111,7 @@ class MessageNewHandler(BaseHandler, MessageMixin):
             "from": self.current_user["username"],
             "body": self.get_argument("body"),
         }
-        message["html"] = self.render_string("message.html", message=message)
+        # message["html"] = self.render_string("message.html", message=message)
         if self.get_argument("next", None):
             self.redirect(self.get_argument("next"))
         else:
@@ -111,7 +120,6 @@ class MessageNewHandler(BaseHandler, MessageMixin):
 
 
 class MessageUpdatesHandler(BaseHandler, MessageMixin):
-    @tornado.web.authenticated
     @tornado.web.asynchronous
     def post(self):
         cursor = self.get_argument("cursor", None)
@@ -128,21 +136,32 @@ class MessageUpdatesHandler(BaseHandler, MessageMixin):
         self.cancel_wait(self.on_new_messages)
 
 
-class AuthLoginHandler(BaseHandler):
+# class User(object):
+#     def __init__
+
+def create_user(username, color='#030303'):
+    user = {
+        'username': username,
+        'signup_time': int(time.time()),
+        'login_time': int(time.time()),
+        'color': color
+    }
+    return user
+
+
+class AuthLoginHandler(BaseHandler, MessageMixin):
     def get(self):
         self.render('login.html', message='Welcome')
 
     def post(self):
         username = self.get_argument('username')
 
-        if username in MessageMixin.online_users:
+        # if username in MessageMixin.online_users:
+        if self.is_online(username):
             self.render('login.html', message='This username have been used')
             return
         # construct a dict for json encoding
-        user = {
-            'username': username,
-            'login_time': int(time.time())
-        }
+        user = create_user(username)
 
         self.set_secure_cookie("user", tornado.escape.json_encode(user))
         self.redirect("/")
@@ -152,6 +171,21 @@ class AuthLogoutHandler(BaseHandler):
     def get(self):
         self.clear_cookie("user")
         self.write("You are now logged out")
+
+
+class RoomHdr(BaseHandler, MessageMixin):
+    @tornado.web.authenticated
+    def get(self):
+        info = {
+            'online_users': self.get_online_users()
+        }
+        self.write(info)
+
+
+class UsersMeHdr(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        self.write(self.current_user)
 
 
 def main():

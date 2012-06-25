@@ -1,46 +1,51 @@
-// Copyright 2009 FriendFeed
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may
-// not use this file except in compliance with the License. You may obtain
-// a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations
-// under the License.
+
 
 $(document).ready(function() {
     if (!window.console) window.console = {};
     if (!window.console.log) window.console.log = function() {};
 
-    $("#messageform").live("submit", function() {
-        newMessage($(this));
-        return false;
-    });
-    $("#messageform").live("keypress", function(e) {
+    UI.disable_input();
+
+    $.getJSON('/users/me', function (user) {
+        $('#panel .info .username .value').html(user.username);
+        UI.enable_input();
+    })
+
+    $("#messageInput").live("keypress", function(e) {
         if (e.keyCode == 13) {
-            newMessage($(this));
+            newMessage($(this).val());
             return false;
         }
     });
-    $("#message").select();
+    $("#messageInput").select();
     updater.poll();
 });
 
-function newMessage(form) {
-    var message = form.formToDict();
-    var disabled = form.find("input[type=submit]");
-    disabled.disable();
+var UI = {
+    disable_input: function () {
+        $('#messageInput').attr('readonly', 'readonly');
+    },
+    enable_input: function () {
+        $('#messageInput').removeAttr('readonly');
+    }
+}
+
+function newMessage(content) {
+    var message = {
+        body: content
+    };
+
+    // var disabled = form.find("input[type=submit]");
+    // disabled.disable();
+
     $.postJSON("/a/message/new", message, function(response) {
         updater.showMessage(response);
         if (message.id) {
-            form.parent().remove();
+            // form.parent().remove();
+            alert('message has id ' + message.id);
         } else {
-            form.find("input[type=text]").val("").select();
-            disabled.enable();
+            $('#messageInput').val('').select();
+            // disabled.enable();
         }
     });
 }
@@ -127,9 +132,13 @@ var updater = {
     showMessage: function(message) {
         var existing = $("#m" + message.id);
         if (existing.length > 0) return;
-        var node = $(message.html);
+        // var node = $(message.html);
+        console.log('function showMessage');
+        var node = $('<div class="message" id="m' + message.id + '"><b>' +
+            message.from + ': </b>' + message.body + '</div>');
         node.hide();
-        $("#inbox").append(node);
+        console.log('node', node);
+        $("#chat .messages").append(node);
         node.slideDown();
     }
 };

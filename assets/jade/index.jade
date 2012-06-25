@@ -1,0 +1,28 @@
+!!! 5
+html
+  head
+    title Chatroom
+    link(rel='stylesheet', href='{{ static_url(\'css/index.css\') }}')
+
+body
+  #main
+    #chat
+      .messages
+      .input
+        textarea#messageInput
+
+    #panel
+      .login
+      .info
+        div.username
+          span.title Username
+          span.value
+        div.number
+          span.title Online user number:
+          span.value x
+        div
+          span.title Online user list:
+        .users
+
+    script(src='{{ static_url(\'js/jquery.min.js\') }}')
+    script(src='{{ static_url(\'js/index.js\') }}')
