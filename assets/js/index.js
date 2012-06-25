@@ -7,7 +7,7 @@ $(document).ready(function() {
     UI.disable_input();
 
     $.getJSON('/users/me', function (user) {
-        $('#panel .info .username .value').html(user.username);
+        $('#username .value').html(user.username);
         UI.enable_input();
     })
 
@@ -18,6 +18,7 @@ $(document).ready(function() {
         }
     });
     $("#messageInput").select();
+
     updater.poll();
 });
 

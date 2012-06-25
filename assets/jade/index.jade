@@ -6,23 +6,47 @@ html
 
 body
   #main
+
+    #panel
+      .head Chatroom
+
+      .content
+
+        .title.folded Login
+          span.arrow
+
+        .login
+          .inputWrapper
+            input(type='text', name='username', placeholder='username')
+            img.tip(src='{{ static_url(\'img/lock.png\') }}')
+            //- input(type='password', name='password', placeholder='password')
+            ul.colors
+              li #0a0a0a
+          input(type='submit', value='Sign&Log In').green-gradient-button
+
+        .userinfo
+          div.item#username
+            span.name Username
+            span.value
+          div.item
+            span.name Login time
+            span.value
+
+        .title.folded Roominfo
+          span.arrow
+
+        .roominfo
+          div.item
+            span.name Online user number:
+            span.value x
+          div
+            span.name Online user list:
+          .users
+
     #chat
       .messages
       .input
         textarea#messageInput
-
-    #panel
-      .login
-      .info
-        div.username
-          span.title Username
-          span.value
-        div.number
-          span.title Online user number:
-          span.value x
-        div
-          span.title Online user list:
-        .users
 
     script(src='{{ static_url(\'js/jquery.min.js\') }}')
     script(src='{{ static_url(\'js/index.js\') }}')

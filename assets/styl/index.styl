@@ -9,16 +9,20 @@ html, body
   position relative
   height 100%
 
+
 #chat
-  position absolute
-  left 0; top 0; bottom 0
-  right 310px
-  border 1px solid #aaa
+  margin-right 300px
+  position: relative;
+  height 100%
+  z-index 9999
+  background: #a7bce0
+  box-shadow 0 0 8px #aaa
 
   .messages
     position absolute
-    left 0; right 0; top 0
-    bottom 150px
+    left 10px; right 10px; top 10px
+    bottom 160px
+    background #fff
 
     .item
       background #eee
@@ -31,13 +35,100 @@ html, body
 
     textarea
       position absolute
-      left 10px
-      right 10px
-      top 10px
-      bottom 10px
+      left 10px; right 10px; top 0
+      bottom 50px
+      border 1px solid #aaa
+      border-radius 2px
+      font-size 15px
+      padding 5px
 
 #panel
-  position absolute
-  top 0; bottom 0; right 0
+  float right
   width 300px
-  border 1px solid #aaa
+  background  #ffa289
+  .title
+    position relative
+    padding 5px 20px
+    width 50px
+    left 220px
+    margin 20px 0 10px 0
+
+  .head
+    text-align center
+    font-size 24px
+    color #333
+    height 38px
+    line-height 38px
+  .content
+    margin 0 10px
+    .login
+      padding 5px 0
+      input
+        display block
+      .inputWrapper
+        overflow hidden
+        input[name="username"], input[name="password"]
+          float left
+          height 25px
+          border 1px solid #bbb
+          border-radius 5px
+        input[name="username"]
+          width 230px
+        img.tip
+          height 30px
+          display block
+          float left
+          margin-left 10px
+          cursor pointer
+        ul.colors
+          margin 5px 0 0 0
+          padding 0
+          li
+            float left
+      input[type="submit"]
+        margin 0 auto
+        width 80px
+
+
+
+// Effects
+
+.green-gradient-button
+  background-color #7fbf4d
+  background-image linear-gradient(top, #7fbf4d, #63a62f)
+  border 1px solid #63a62f
+  border-bottom 1px solid #5b992b
+  border-radius 3px
+  box-shadow inset 0 1px 0 0 #96ca6d
+  color #fff
+  font bold 11px "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Geneva, Verdana, sans-serif
+  line-height 1
+  padding 7px 0 8px 0
+  text-align center
+  text-shadow 0 -1px 0 #4c9021
+  width 150px
+.green-gradient-button:hover
+  background-color #76b347
+  background-image linear-gradient(top, #76b347, #5e9e2e)
+  box-shadow inset 0 1px 0 0 #8dbf67
+  cursor pointer
+.green-gradient-button:active
+  border 1px solid #5b992b
+  border-bottom 1px solid #538c27
+  box-shadow inset 0 0 8px 4px #548c29, 0 1px 0 0 #eeeeee
+
+.title.folded
+  box-shadow 1px 1px 3px #292929
+  color #454545
+  text-shadow 0 1px 0 white
+  background #e3e3e3
+  background -webkit-gradient(linear, left top, left bottom, from(#e3e3e3), to(#c8c8c8))
+.title.folded .arrow
+  width 0
+  height 0
+  line-height 0
+  border-right 20px solid transparent
+  border-top 10px solid #c8c8c8
+  top: 104%
+  right: 0
+  position absolute
