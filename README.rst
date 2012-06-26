@@ -8,10 +8,16 @@ Design for simple and convenience chatting
 TODO
 ----
 
- - complete UI
+ - #panel head underline width fix
+
+ - .roominfo users slide show
+
+ - jquery-tmpl .message rendering
+
+ - Userinfo & Login changing
+
+ - logout button
 
  - system message
 
- - color select
-
- -
+ - backbone refactoring

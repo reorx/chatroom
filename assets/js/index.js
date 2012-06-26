@@ -1,15 +1,80 @@
 
-
 $(document).ready(function() {
     if (!window.console) window.console = {};
     if (!window.console.log) window.console.log = function() {};
 
-    UI.disable_input();
+    // listen chat server
+    updater.poll();
 
+    // panel area event bindings
+    var $inputUsername = $('#panel input[name="username"]'),
+        $aTip = $('#panel a.tip'),
+        $aCancel = $('#panel a.cancel'),
+        $inputPassword = $('#panel input[name="password"]');
+
+    $inputUsername.data('width', $inputUsername.width() + 'px');
+
+    $aTip.click(function () {
+        var p_width = '118px';
+
+        $inputUsername.animate({
+            width: p_width
+        });
+        $aTip.fadeOut(function () {
+            $inputPassword.css(
+                {'width': p_width}
+            ).fadeIn();
+            $aCancel.fadeIn();
+        });
+    });
+
+    $aCancel.click(function () {
+        $aCancel.fadeOut();
+        $inputPassword.fadeOut(function() {
+            $inputUsername.animate({
+                width: $inputUsername.data('width')
+            });
+            $aTip.fadeIn();
+        });
+    });
+
+    $('#panel .colors a').each(function(loop, item) {
+        // console.log($(item));
+        var $this = $(item);
+        $this.css('background', $this.html()).html('');
+    }).click(function() {
+        $('#panel .cursor').appendTo($(this).parent()
+        ).show();
+    });
+
+    // ajax - /user/me
     $.getJSON('/users/me', function (user) {
-        $('#username .value').html(user.username);
+        // UI.enable_input();
+        // $('#username .value')
+        $('#panel .userinfo .username').html(user.username);
+        $('#panel .userinfo .loginTime').html(datetimeFromTimestamp(user.login_time));
+
+        $('#panel .title.sec0 .text').html('Userinfo');
+        $('#panel .login').hide();
+        $('#panel .userinfo').show();
         UI.enable_input();
-    })
+    });
+
+    // ajax - /room
+    $.getJSON('/room', function(room) {
+        $('#panel .roominfo .number').html(room.online_users.length);
+        for (var i in room.online_users) {
+            var user = room.online_users[i];
+            var $item = $('<div></div>');
+            $item.addClass('item').attr('username', user.username
+            ).css({
+                'color': user.color
+            }
+            ).html(user.username.slice(0, 1).toUpperCase()
+            ).appendTo($('#panel .roominfo .users'));
+        }
+
+    });
 
     $("#messageInput").live("keypress", function(e) {
         if (e.keyCode == 13) {
@@ -17,9 +82,6 @@ $(document).ready(function() {
             return false;
         }
     });
-    $("#messageInput").select();
-
-    updater.poll();
 });
 
 var UI = {
@@ -29,7 +91,7 @@ var UI = {
     enable_input: function () {
         $('#messageInput').removeAttr('readonly');
     }
-}
+};
 
 function newMessage(content) {
     var message = {
@@ -54,6 +116,16 @@ function newMessage(content) {
 function getCookie(name) {
     var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
     return r ? r[1] : undefined;
+}
+
+function datetimeFromTimestamp(ts) {
+    var d =  new Date(ts * 1000);
+    return d.getFullYear() +
+        '-' + d.getMonth() +
+        '-' + d.getDate() +
+        '  ' + d.getHours() +
+        ':' + d.getMinutes() +
+        ':' + d.getSeconds();
 }
 
 jQuery.postJSON = function(url, args, callback) {

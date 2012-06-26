@@ -9,44 +9,77 @@ body
 
     #panel
       .head Chatroom
+        span.deco_left
+        span.deco_right
+        .deco_underline
 
-      .content
+      .body
 
-        .title.folded Login
+        .title.folded.sec0
+          span.text Login
           span.arrow
 
         .login
           .inputWrapper
             input(type='text', name='username', placeholder='username')
-            img.tip(src='{{ static_url(\'img/lock.png\') }}')
-            //- input(type='password', name='password', placeholder='password')
-            ul.colors
-              li #0a0a0a
-          input(type='submit', value='Sign&Log In').green-gradient-button
+            //- img.tip(src='{{ static_url(\'img/lock.png\') }}')
+            a.tip
+            input(type='password', name='password', placeholder='password', style='display: none;')
+            a.cancel(style='display: none;') x
+          ul.colors
+            li
+              a #3A3A3A
+              span.cursor
+            li
+              a #B00B0B
+            li
+              a #B0770B
+            li
+              a #0BB038
+            li
+              a #0B77B0
+            li
+              a #5B0BB0
+            li
+              a #B00B69
+          //- .submitWrapper
+          //-   input(type='submit', value='Sign&Log In').green-gradient-button
 
-        .userinfo
-          div.item#username
-            span.name Username
-            span.value
-          div.item
-            span.name Login time
-            span.value
+        .userinfo(style='display: none;')
+          p Username
+            b.username
+          p Login time
+            b.loginTime
 
-        .title.folded Roominfo
+        .title.folded.sec1
+          span.text Roominfo
           span.arrow
 
         .roominfo
-          div.item
-            span.name Online user number:
-            span.value x
-          div
-            span.name Online user list:
+          p Online users
+            b.number
           .users
+            .item(username='reorx') R
 
     #chat
       .messages
+        .ruler
+        .body
+          .message
+            .username Reorx
+            .contents
+              .content
+                .text Hello everybody, welcome to Chatroom ~~
+                .datetime 22:41
       .input
-        textarea#messageInput
+        textarea#messageInput(readonly='readonly')
 
+    #tmpl-message.tmpl
+      .message
+        .username Reorx
+        .contents
+          .content
+            .text Hello everybody, welcome to Chatroom ~~
+            .datetime 22:41
     script(src='{{ static_url(\'js/jquery.min.js\') }}')
     script(src='{{ static_url(\'js/index.js\') }}')
