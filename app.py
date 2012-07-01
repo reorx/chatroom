@@ -50,6 +50,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class MainHandler(BaseHandler):
     def get(self):
+        logging.info('\n====Get page====')
         self.render("index.html", messages=MessageMixin.cache)
 
 

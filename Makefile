@@ -20,7 +20,7 @@ static/css/%.css: assets/styl/%.styl
 	stylus < $< > $@
 
 static/js/%.js: assets/js/%.js
-	uglifyjs -o $@ $<
+	cp $< $@
 
 clean:
 	rm -rf templates/ static/

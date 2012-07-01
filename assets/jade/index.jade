@@ -3,6 +3,7 @@ html
   head
     title Chatroom
     link(rel='stylesheet', href='{{ static_url(\'css/index.css\') }}')
+    script(src='/static/js/libs/require.js', data-main='/static/js/index.js')
 
 body
   #main
@@ -13,53 +14,53 @@ body
         span.deco_right
         .deco_underline
 
-      .body
+      //- .body
 
-        .title.folded.sec0
-          span.text Login
-          span.arrow
+      .title.folded.sec0
+        span.text Login
+        span.arrow
 
-        .login
-          .inputWrapper
-            input(type='text', name='username', placeholder='username')
-            //- img.tip(src='{{ static_url(\'img/lock.png\') }}')
-            a.tip
-            input(type='password', name='password', placeholder='password', style='display: none;')
-            a.cancel(style='display: none;') x
-          ul.colors
-            li
-              a #3A3A3A
-              span.cursor
-            li
-              a #B00B0B
-            li
-              a #B0770B
-            li
-              a #0BB038
-            li
-              a #0B77B0
-            li
-              a #5B0BB0
-            li
-              a #B00B69
-          //- .submitWrapper
-          //-   input(type='submit', value='Sign&Log In').green-gradient-button
+      .login
+        .inputWrapper
+          input(type='text', name='username', placeholder='username')
+          //- img.tip(src='{{ static_url(\'img/lock.png\') }}')
+          a.tip
+          input(type='password', name='password', placeholder='password', style='display: none;')
+          a.cancel(style='display: none;') x
+        ul.colors
+          li
+            a(color='#3A3A3A')
+            span.cursor
+          li
+            a(color='#B00B0B')
+          li
+            a(color='#B0770B')
+          li
+            a(color='#0BB038')
+          li
+            a(color='#0B77B0')
+          li
+            a(color='#5B0BB0')
+          li
+            a(color='#B00B69')
+        //- .submitWrapper
+        //-   input(type='submit', value='Sign&Log In').green-gradient-button
 
-        .userinfo(style='display: none;')
-          p Username
-            b.username
-          p Login time
-            b.loginTime
+      .userinfo(style='display: none;')
+        p Username
+          b.username
+        p Login time
+          b.loginTime
 
-        .title.folded.sec1
-          span.text Roominfo
-          span.arrow
+      .title.folded.sec1
+        span.text Roominfo
+        span.arrow
 
-        .roominfo
-          p Online users
-            b.number
-          .users
-            .item(username='reorx') R
+      .roominfo
+        p Online users
+          b.number
+        .users
+          .item(username='reorx') R
 
     #chat
       .messages
@@ -81,5 +82,3 @@ body
           .content
             .text Hello everybody, welcome to Chatroom ~~
             .datetime 22:41
-    script(src='{{ static_url(\'js/jquery.min.js\') }}')
-    script(src='{{ static_url(\'js/index.js\') }}')

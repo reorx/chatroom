@@ -58,7 +58,6 @@ html, body
               width 40px
               height 20px
 
-
   .input
     position absolute
     left 0; right 0; bottom 0
@@ -75,31 +74,40 @@ html, body
 
 #panel
   float right
-  width 300px
+  width 267px
+  padding 0 15px 100px 17px
   background  #fafafa
   box-shadow -5px 5px 5px #bbb
   border-right 1px solid #eee
+
   .title
     position relative
     width 100px
     height 30px
     padding-left 15px
-    left 191px
+    left 188px
     margin 20px 0 10px 0
     line-height 30px
   .title .arrow
     top 31px
 
+  p
+    font-size 15px
+    color #444
+    b
+      margin-left 10px
+      color #B00B0B
+
   .head
     position relative
+    height 50px
+    line-height 43px
     text-align center
     font-size 26px
     color #074082
-    height 40px
-    line-height 43px
     font-weight bold
     letter-spacing 1.5px
-    // text-shadow 0px 0 2px #770C0C
+    z-index 1
     .deco_left, .deco_right
       display block
       position absolute
@@ -110,134 +118,122 @@ html, body
       background-repeat no-repeat
     .deco_left
       background-image url('/static/img/title_deco_l.png')
-      left 55px
+      left 42px
     .deco_right
       background-image url('/static/img/title_deco_r.png')
-      right 50px
+      right 37px
     .deco_underline
-      margin 0 auto
-      width 250px
+      position absolute
+      width 100%
       height 1px
+      bottom 2px
       background transparent
       border-bottom 1px solid #ccc
-      position relative
-      top 5px
       box-shadow 0 1px 1px #dfdfdf
+      z-index 9999
 
-  .body
-    margin 30px 15px 100px
-
-    p
-      font-size 15px
-      color #444
-      b
+  .login
+    padding 5px 0
+    // text-align center
+    input
+      display block
+      outline none
+    .inputWrapper
+      position relative
+      overflow hidden
+      input[name="username"], input[name="password"]
+        float left
+        height 25px
+        border 1px solid #bbb
+        border-radius 3px
+        padding: 0 5px
+      input[name="username"]
+        width 220px
+      input[name="password"]
         margin-left 10px
-        color #B00B0B
-
-    .login
-      padding 5px 0
-      // text-align center
-      input
+      a.tip
         display block
-        outline none
-      .inputWrapper
+        width 20px
+        height 25px
+        float right
         position relative
-        overflow hidden
-        input[name="username"], input[name="password"]
-          float left
-          height 25px
-          border 1px solid #bbb
-          border-radius 3px
-          padding: 0 5px
-        input[name="username"]
-          width 220px
-        input[name="password"]
-          margin-left 10px
-        a.tip
-          display block
-          width 20px
-          height 25px
-          float right
+        top -1px
+        background-image url('/static/img/lock.png');
+        background-size 30px
+        background-position -5px -3px
+        cursor pointer
+      a.cancel
+        display block
+        position absolute
+        right 1px
+        width 25px
+        height 26px
+        // border 1px solid #bbb
+        border-radius 0 3px 3px 0
+        background #922626
+        font-size 18px
+        color #fff
+        font-family sans-serif
+        font-weight bold
+        text-align center
+        line-height 26px
+        cursor pointer
+    ul.colors
+      overflow hidden
+      // width 140px
+      display block
+      margin 0
+      margin-top 10px
+      padding 3px
+      list-style none
+      li:last-child
+        margin-right 0
+      li
+        margin-right 10px
+        float left
+        position relative
+        // height 20px
+        a
           position relative
-          top -1px
-          background-image url('/static/img/lock.png');
-          background-size 30px
-          background-position -5px -3px
-          cursor pointer
-        a.cancel
+          z-index 9
+          display inline-block
+          width 20px
+          height 20px
+          box-shadow 0 0 8px #555 inset
+        .cursor
           display block
           position absolute
-          right 1px
-          width 25px
-          height 26px
-          // border 1px solid #bbb
-          border-radius 0 3px 3px 0
-          background #922626
-          font-size 18px
-          color #fff
-          font-family sans-serif
-          font-weight bold
-          text-align center
-          line-height 26px
-          cursor pointer
-      ul.colors
-        overflow hidden
-        // width 140px
-        display block
-        margin 0
-        margin-top 10px
-        padding 3px
-        list-style none
-        li:last-child
-          margin-right 0
-        li
-          margin-right 10px
-          float left
-          position relative
-          // height 20px
-          a
-            position relative
-            z-index 9
-            display inline-block
-            width 20px
-            height 20px
-            box-shadow 0 0 8px #555 inset
-          .cursor
-            display block
-            position absolute
-            left -3px; top -3px
-            width 24px
-            height 24px
-            border 1px solid #555
-            background #fff
-            z-index 1
-      // .clear
-      //   clear both
-      .submitWrapper
-        margin-top 10px
-        overflow: hidden
-        input[type="submit"]
-          float right
-          width 80px
-          font-size 11px
+          left -3px; top -3px
+          width 24px
+          height 24px
+          border 1px solid #555
+          background #fff
+          z-index 1
+    .submitWrapper
+      margin-top 10px
+      overflow: hidden
+      input[type="submit"]
+        float right
+        width 80px
+        font-size 11px
 
-    .userinfo
+  .userinfo
 
-    .roominfo
-      .users
-        box-shadow 0 0 10px #888 inset
-        height 100px
-        background #fff
-        padding 10px
-        .item
-          float left
-          width 35px
-          height 35px
-          margin 0 10px 10px 0
-          line-height 35px
-          border 1px solid #aaa
-          text-align center
-          color #0BB038
+  .roominfo
+    .users
+      box-shadow 0 0 10px #888 inset
+      height 100px
+      background #fff
+      padding 10px
+      .item
+        float left
+        width 35px
+        height 35px
+        margin 0 10px 10px 0
+        line-height 35px
+        border 1px solid #aaa
+        text-align center
+        color #0BB038
 
 
 // Effects

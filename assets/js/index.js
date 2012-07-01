@@ -1,217 +1,85 @@
-
-$(document).ready(function() {
-    if (!window.console) window.console = {};
-    if (!window.console.log) window.console.log = function() {};
-
-    // listen chat server
-    updater.poll();
-
-    // panel area event bindings
-    var $inputUsername = $('#panel input[name="username"]'),
-        $aTip = $('#panel a.tip'),
-        $aCancel = $('#panel a.cancel'),
-        $inputPassword = $('#panel input[name="password"]');
-
-    $inputUsername.data('width', $inputUsername.width() + 'px');
-
-    $aTip.click(function () {
-        var p_width = '118px';
-
-        $inputUsername.animate({
-            width: p_width
-        });
-        $aTip.fadeOut(function () {
-            $inputPassword.css(
-                {'width': p_width}
-            ).fadeIn();
-            $aCancel.fadeIn();
-        });
-    });
-
-    $aCancel.click(function () {
-        $aCancel.fadeOut();
-        $inputPassword.fadeOut(function() {
-            $inputUsername.animate({
-                width: $inputUsername.data('width')
-            });
-            $aTip.fadeIn();
-        });
-    });
-
-    $('#panel .colors a').each(function(loop, item) {
-        // console.log($(item));
-        var $this = $(item);
-        $this.css('background', $this.html()).html('');
-    }).click(function() {
-        $('#panel .cursor').appendTo($(this).parent()
-        ).show();
-    });
-
-    // ajax - /user/me
-    $.getJSON('/users/me', function (user) {
-        // UI.enable_input();
-        // $('#username .value')
-        $('#panel .userinfo .username').html(user.username);
-        $('#panel .userinfo .loginTime').html(datetimeFromTimestamp(user.login_time));
-
-        $('#panel .title.sec0 .text').html('Userinfo');
-        $('#panel .login').hide();
-        $('#panel .userinfo').show();
-        UI.enable_input();
-    });
-
-    // ajax - /room
-    $.getJSON('/room', function(room) {
-        $('#panel .roominfo .number').html(room.online_users.length);
-        for (var i in room.online_users) {
-            var user = room.online_users[i];
-            var $item = $('<div></div>');
-            $item.addClass('item').attr('username', user.username
-            ).css({
-                'color': user.color
-            }
-            ).html(user.username.slice(0, 1).toUpperCase()
-            ).appendTo($('#panel .roominfo .users'));
-        }
-
-    });
-
-    $("#messageInput").live("keypress", function(e) {
-        if (e.keyCode == 13) {
-            newMessage($(this).val());
-            return false;
-        }
-    });
+require.config({
+    baseUrl: "/static/js",
+    paths: {
+        'jquery': 'libs/jquery-amd',
+        'underscore': 'libs/underscore-amd',
+        'backbone': 'libs/backbone-amd',
+        'domReady': 'libs/domReady'
+    }
 });
 
-var UI = {
-    disable_input: function () {
-        $('#messageInput').attr('readonly', 'readonly');
-    },
-    enable_input: function () {
-        $('#messageInput').removeAttr('readonly');
-    }
-};
+require([
+    'jquery',
+    'underscore',
+    'backbone',
+    'domReady'
+], function($, _, Backbone, domReady) {
+    // test modules
+    console.log('index.js');
+    console.log('underscore', _.each);
+    console.log('backbone', Backbone.Model);
 
-function newMessage(content) {
-    var message = {
-        body: content
-    };
+    // define views
+    var PanelView = Backbone.View.extend({
+        // el: $('#panel')
 
-    // var disabled = form.find("input[type=submit]");
-    // disabled.disable();
+        events: {
+            'click a.tip': 'showPasswordInput',
+            'click a.cancel': 'hidePasswordInput'
+        },
 
-    $.postJSON("/a/message/new", message, function(response) {
-        updater.showMessage(response);
-        if (message.id) {
-            // form.parent().remove();
-            alert('message has id ' + message.id);
-        } else {
-            $('#messageInput').val('').select();
-            // disabled.enable();
+        initialize: function() {
+            this.inputWidth= '115px';
+        },
+
+        showPasswordInput: function(e) {
+            var et = $(e.currentTarget),
+                _this = this,
+                $username = _this.$('input[name="username"]'),
+                $password = _this.$('input[name="password"]');
+
+
+            $username.data('width', $username.width() + 'px')
+                .animate({
+                    width: _this.inputWidth
+                });
+
+            et.fadeOut(function() {
+                $password.css({'width': _this.inputWidth})
+                    .fadeIn();
+                _this.$('a.cancel').fadeIn();
+            });
+        },
+
+        hidePasswordInput: function(e) {
+            var et = $(e.currentTarget),
+                _this = this,
+                $username = _this.$('input[name="username"]'),
+                $password = _this.$('input[name="password"]');
+
+            et.fadeOut();
+            $password.fadeOut(function() {
+                $username.animate({
+                    width: $username.data('width')
+                });
+                _this.$('a.tip').fadeIn();
+            });
         }
     });
-}
 
-function getCookie(name) {
-    var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
-    return r ? r[1] : undefined;
-}
+    domReady(function() {
+        // jquery
+        $('#panel .colors a').each(function(loop, item) {
+            // console.log($(item));
+            var $this = $(item);
+            $this.css('background', $this.attr('color'));
+        }).click(function() {
+            $('#panel .cursor').appendTo($(this).parent()
+            ).show();
+        });
 
-function datetimeFromTimestamp(ts) {
-    var d =  new Date(ts * 1000);
-    return d.getFullYear() +
-        '-' + d.getMonth() +
-        '-' + d.getDate() +
-        '  ' + d.getHours() +
-        ':' + d.getMinutes() +
-        ':' + d.getSeconds();
-}
+        // background
+        panelView = new PanelView({el: $('#panel')});
 
-jQuery.postJSON = function(url, args, callback) {
-    args._xsrf = getCookie("_xsrf");
-    $.ajax({url: url, data: $.param(args), dataType: "text", type: "POST",
-            success: function(response) {
-        if (callback) callback(eval("(" + response + ")"));
-    }, error: function(response) {
-        console.log("ERROR:", response)
-    }});
-};
-
-jQuery.fn.formToDict = function() {
-    var fields = this.serializeArray();
-    var json = {}
-    for (var i = 0; i < fields.length; i++) {
-        json[fields[i].name] = fields[i].value;
-    }
-    if (json.next) delete json.next;
-    return json;
-};
-
-jQuery.fn.disable = function() {
-    this.enable(false);
-    return this;
-};
-
-jQuery.fn.enable = function(opt_enable) {
-    if (arguments.length && !opt_enable) {
-        this.attr("disabled", "disabled");
-    } else {
-        this.removeAttr("disabled");
-    }
-    return this;
-};
-
-var updater = {
-    errorSleepTime: 500,
-    cursor: null,
-
-    poll: function() {
-        var args = {"_xsrf": getCookie("_xsrf")};
-        if (updater.cursor) args.cursor = updater.cursor;
-        $.ajax({url: "/a/message/updates", type: "POST", dataType: "text",
-                data: $.param(args), success: updater.onSuccess,
-                error: updater.onError});
-    },
-
-    onSuccess: function(response) {
-        try {
-            updater.newMessages(eval("(" + response + ")"));
-        } catch (e) {
-            updater.onError();
-            return;
-        }
-        updater.errorSleepTime = 500;
-        window.setTimeout(updater.poll, 0);
-    },
-
-    onError: function(response) {
-        updater.errorSleepTime *= 2;
-        console.log("Poll error; sleeping for", updater.errorSleepTime, "ms");
-        window.setTimeout(updater.poll, updater.errorSleepTime);
-    },
-
-    newMessages: function(response) {
-        if (!response.messages) return;
-        updater.cursor = response.cursor;
-        var messages = response.messages;
-        updater.cursor = messages[messages.length - 1].id;
-        console.log(messages.length, "new messages, cursor:", updater.cursor);
-        for (var i = 0; i < messages.length; i++) {
-            updater.showMessage(messages[i]);
-        }
-    },
-
-    showMessage: function(message) {
-        var existing = $("#m" + message.id);
-        if (existing.length > 0) return;
-        // var node = $(message.html);
-        console.log('function showMessage');
-        var node = $('<div class="message" id="m' + message.id + '"><b>' +
-            message.from + ': </b>' + message.body + '</div>');
-        node.hide();
-        console.log('node', node);
-        $("#chat .messages").append(node);
-        node.slideDown();
-    }
-};
+    });
+});
