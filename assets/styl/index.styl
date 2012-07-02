@@ -75,12 +75,12 @@ html, body
 #panel
   float right
   width 267px
-  padding 0 15px 100px 17px
+  padding 0 15px 30px 17px
   background  #fafafa
   box-shadow -5px 5px 5px #bbb
   border-right 1px solid #eee
 
-  .title
+  > .title
     position relative
     width 100px
     height 30px
@@ -88,7 +88,7 @@ html, body
     left 188px
     margin 20px 0 10px 0
     line-height 30px
-  .title .arrow
+  > .title .arrow
     top 31px
 
   p
@@ -131,6 +131,40 @@ html, body
       border-bottom 1px solid #ccc
       box-shadow 0 1px 1px #dfdfdf
       z-index 9999
+
+  .status
+    height 50px
+    background #fff
+    margin-top 15px
+    box-shadow 0 0 8px #ccc inset
+    position relative
+    .title
+      position absolute
+      left 110px
+      width 50px
+      border-left 1px solid #ccc
+      border-right 1px solid #ccc
+      border-bottom 1px solid #ccc
+      border-radius 0 0 8px 8px
+      font-size 14px
+      text-align center
+      color #041F3E
+    .content
+      position absolute
+      left 0; right 0; bottom 5px
+      top 25px
+      text-align center
+      font-size 16px
+      // font-family helvetica, arial, sans-serif
+    .content.info
+      color #041F3E
+    .content.warning
+      color #A88E00
+    .content.error
+      color #9C1E04
+
+  .wrapper
+    overflow hidden
 
   .login
     padding 5px 0
@@ -218,6 +252,9 @@ html, body
         font-size 11px
 
   .userinfo
+    p
+      margin 0
+      margin-top 10px
 
   .roominfo
     .users
@@ -268,8 +305,12 @@ html, body
   box-shadow 1px 1px 3px #555
   color #111
   text-shadow 0 1px 0 #eee
-  background #e3e3e3
-  background-image -webkit-gradient(linear, left top, left bottom, from(#DFE6EF), to(#AFCCED))
+  background-color #AFCCED
+  // background-image -webkit-gradient(linear, left top, left bottom, from(#DFE6EF), to(#AFCCED))
+  background-image: -webkit-gradient(linear, left top, left bottom,
+    color-stop(0%, rgba(255, 255, 255, 0.5)),
+    color-stop(100%, rgba(255, 255, 255, 0.1))
+  );
 .title.folded .arrow
   width 0
   height 0
@@ -279,3 +320,12 @@ html, body
   border-top 10px solid #97A5B7
   right: 0
   position absolute
+.title.folded, .title.folded .arrow
+  -webkit-transition all 1s ease-in-out
+
+.title.green
+  background-color #86CF4D
+  cursor pointer
+.title.green .arrow
+  border-top-color #599729
+

@@ -12,10 +12,6 @@ TODO
 
  - jquery-tmpl .message rendering
 
- - Userinfo & Login changing
-
  - logout button
 
  - system message
-
- - backbone refactoring
