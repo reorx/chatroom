@@ -21,42 +21,59 @@ html, body
   background: #a7bce0
   box-shadow 0 0 8px #aaa
 
-  .messages
+  .ruler
+    position absolute
+    left 0; top 0; bottom 160px
+    width 100px
+    // background #DAE8EF
+    border-right 1px solid #C4D1D7
+    z-index 999
+
+  .chats
     position absolute
     left 0px; right 0px; top 0px
     bottom 160px
     background #fff
-
-    .ruler
-      position absolute
-      left 0; top 0; bottom 0
-      width 100px
-      // background #DAE8EF
-      border-right 1px solid #C4D1D7
-      z-index 1
+    overflow-y scroll
     .body
       position relative
       z-index 9
-      .message
-        margin-top 10px
+      // .message
+      .dialog.split
+        border-top 1px solid #999
+      .dialog
+        position relative
+        padding-top 5px
+        padding-bottom 5px
+        .username_bg
+          position absolute
+          left 0; top 0; bottom 0
+          width 5px
+          opacity 0.5
         .username
           float left
           width 95px
           height 20px
           padding-right 5px
           text-align right
-        .contents
+        // .contents
+        .messages
           margin-left 105px
-          .content
+          // .content
+          .item
+            position relative
             .text
               margin-right 50px
-              border-right 1px solid #C4D1D7
+              // border-right 1px solid #C4D1D7
             .datetime
               position absolute
               right 0; top 0
               padding-left 10px
               width 40px
               height 20px
+              line-height 20px
+              font-size 14px
+              color #888
 
   .input
     position absolute
@@ -94,9 +111,11 @@ html, body
   p
     font-size 15px
     color #444
-    b
+    b, a
       margin-left 10px
       color #B00B0B
+    a
+      font-style italic
 
   .head
     position relative
@@ -329,3 +348,69 @@ html, body
 .title.green .arrow
   border-top-color #599729
 
+.prettyscrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    border-left: solid 1 #000
+}
+
+.prettyscrollbar::-webkit-scrollbar-button:start:decrement {
+    display: block;
+    height: 0px
+}
+
+.prettyscrollbar::-webkit-scrollbar-button:end:increment {
+    display: block;
+    height: 0px
+}
+
+.prettyscrollbar::-webkit-scrollbar-button:vertical:increment {
+    background-color: transparent
+}
+
+.prettyscrollbar::-webkit-scrollbar-track:enabled {
+    background-color: rgba(122, 161, 185, 0.5);
+}
+
+.prettyscrollbar::-webkit-scrollbar-thumb:vertical {
+    height: 50px;
+    background-color: rgba(0,0,0,.3);
+    -webkit-border-radius: 5px
+}
+
+.prettyscrollbar::-webkit-scrollbar-thumb:horizontal {
+    width: 50px;
+    background-color: rgba(0,0,0,.2);
+    -webkit-border-radius: 5px
+}
+
+
+
+.scrollbar1::-webkit-scrollbar {
+    width: 10px;
+    height: 6px;
+}
+
+.scrollbar1::-webkit-scrollbar-button:start:decrement,
+.scrollbar1::-webkit-scrollbar-button:end:increment {
+    height: 30px;
+    display: block;
+    background-color: transparent;
+}
+
+.scrollbar1::-webkit-scrollbar-track-piece {
+    background-color: #3b3b3b;
+    -webkit-border-radius: 6px;
+}
+
+.scrollbar1::-webkit-scrollbar-thumb:vertical {
+    height: 50px;
+    background-color: #666;
+    -webkit-border-radius: 6px;
+}
+
+.scrollbar1::-webkit-scrollbar-thumb:horizontal {
+    width: 50px;
+    background-color: #666;
+    -webkit-border-radius: 3px;
+}

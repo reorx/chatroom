@@ -2,6 +2,7 @@
 
 import re
 import time
+import datetime
 import logging
 import uuid
 from bson.objectid import ObjectId
@@ -25,29 +26,6 @@ PASSWORD_VALIDATOR = RegexValidator(6, 32, 'must be words&symbols in 6~32 range'
 USERNAME_VALIDATOR = WordsValidator(4, 16, 'must be words in 4~16 range')
 
 
-class BaseHandler(_BaseHandler):
-
-    db = conns.get('mongodb', 'master').chatroom
-
-    HTTP_STATUS_EXCEPTIONS = {
-        # 400: (errors.ParametersInvalid, errors.OperationNotAllowed),
-        (errors.ParametersInvalid, errors.OperationNotAllowed): '_handle_400',
-        # 401: (errors.AuthenticationNotPass),
-        (errors.AuthenticationNotPass): '_handle_401',
-        # 404: (errors.ObjectNotFound)
-        (errors.ObjectNotFound): '_handle_404'
-    }
-
-    def _handle_400(self, e):
-        self.json_error(400, e)
-
-    def _handle_401(self, e):
-        self.json_error(401, e)
-
-    def _handle_404(self, e):
-        self.json_error(404, e)
-
-
 class AuthMixin(object):
 
     def authenticate(self):
@@ -67,108 +45,6 @@ class AuthMixin(object):
 
     def authorize(self, user):
         self.set_secure_cookie('user_id', str(user['_id']))
-
-
-class AuthedHandler(BaseHandler, AuthMixin):
-    PREPARES = ['auth']
-
-    def _prepare_auth(self):
-        self.authenticate()
-
-
-class MainHandler(BaseHandler):
-    def get(self):
-        self.render("index.html")
-
-
-class MessageMixin(object):
-    waiters = set()
-    messages = []
-    cache_size = 200
-
-    def get_online_users(self):
-        cls = MessageMixin
-        # print 'get online users'
-        # for i in cls.waiters:
-        #     print i.im_self
-        return [i.im_self.user for i in cls.waiters if hasattr(i.im_self, 'user')]
-
-    def is_online(self, username):
-        for i in self.get_online_users():
-            if i['username'] == username:
-                return True
-        return False
-
-    def wait_for_messages(self, callback, cursor=None):
-        cls = MessageMixin
-
-        if cursor:
-            index = 0
-            for i in xrange(len(cls.messages)):
-                index = len(cls.messages) - i - 1
-                if cls.messages[index]["id"] == cursor:
-                    break
-            recent = cls.messages[index + 1:]
-            if recent:
-                callback(recent)
-                return
-        cls.waiters.add(callback)
-
-    def cancel_wait(self, callback):
-        cls = MessageMixin
-        cls.waiters.remove(callback)
-
-    def new_messages(self, messages):
-        cls = MessageMixin
-        logging.info("Sending new message to %r listeners", len(cls.waiters))
-        for callback in cls.waiters:
-            try:
-                callback(messages)
-            except:
-                logging.error("Error in waiter callback", exc_info=True)
-        cls.waiters = set()
-        cls.messages.extend(messages)
-        if len(cls.messages) > self.cache_size:
-            cls.messages = cls.messages[-self.cache_size:]
-
-
-class MessageUpdatesHandler(BaseHandler, AuthMixin, MessageMixin):
-    @define_api([
-        ('cursor', False)
-    ])
-    @asynchronous
-    def post(self):
-        try:
-            self.authenticate()
-        except errors.AuthenticationNotPass:
-            pass
-        self.wait_for_messages(self.on_new_messages,
-                               cursor=self.params.get('cursor', None))
-
-    def on_new_messages(self, messages):
-        # Closed client connection
-        if self.request.connection.stream.closed():
-            return
-        self.finish(dict(messages=messages))
-
-    def on_connection_close(self):
-        self.cancel_wait(self.on_new_messages)
-
-
-class MessageNewHdr(AuthedHandler, MessageMixin):
-    @define_api([
-        ('body', True)
-    ])
-    def post(self):
-        message = {
-            "id": str(uuid.uuid4()),
-            "timestamp": int(time.time()),
-            "from": self.user["username"],
-            "body": self.params.body
-        }
-        # message["html"] = self.render_string("message.html", message=message)
-        self.write(message)
-        self.new_messages([message])
 
 
 class UserMixin(object):
@@ -209,7 +85,175 @@ class UserMixin(object):
         return _id
 
 
-class LoginHdr(BaseHandler, AuthMixin, UserMixin, MessageMixin):
+class MessageMixin(object):
+    """
+    Message
+     - _id
+     - username
+     - content
+     - time
+     - hourtime
+     - datetime
+    """
+    def create_message(self, content):
+        t = time.time()
+        dt = datetime.datetime.fromtimestamp(t)
+        msg = {
+            '_id': ObjectId(),
+            'username': self.user['username'],
+            'content': content,
+            'time': t,
+            'datetime': dt.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        self.save_message(msg)
+        return msg
+
+    def save_message(self, msg):
+        _id = self.db.messages.save(msg, safe=True)
+        if not _id:
+            raise errors.DatabaseError('mongodb insert failed: %' % msg)
+        return _id
+
+
+class PollMixin(object):
+    waiters = set()
+    cache = []
+    cache_size = 200
+
+    def get_online_users(self):
+        cls = PollMixin
+        return [i.im_self.user for i in cls.waiters if hasattr(i.im_self, 'user')]
+
+    def is_online(self, username):
+        for i in self.get_online_users():
+            if i['username'] == username:
+                return True
+        return False
+
+    def wait_for_messages(self, callback, cursor=None):
+        cls = PollMixin
+
+        # if cursor:
+        #     index = 0
+        #     for i in xrange(len(cls.cache)):
+        #         index = len(cls.cache) - i - 1
+        #         if cls.cache[index]["id"] == cursor:
+        #             break
+        #     recent = cls.cache[index + 1:]
+        #     if recent:
+        #         callback(recent)
+        #         return
+        cls.waiters.add(callback)
+
+    def cancel_wait(self):
+        cls = PollMixin
+        cls.waiters.remove(self.on_new_messages)
+
+    def sendMessage(self, msg):
+        cls = PollMixin
+        logging.info("Sending new messages to %r listeners", len(cls.waiters))
+
+        for callback in cls.waiters:
+            try:
+                callback(msg)
+            except:
+                logging.error("Error in waiter callback", exc_info=True)
+
+        # clear waiters
+        cls.waiters = set()
+
+        # add message to message cache
+        cls.cache.append(msg)
+        if len(cls.cache) > self.cache_size:
+            cls.cache = cls.cache[-self.cache_size:]
+
+
+class BaseHandler(_BaseHandler):
+
+    db = conns.get('mongodb', 'master').chatroom
+
+    HTTP_STATUS_EXCEPTIONS = {
+        # 400: (errors.ParametersInvalid, errors.OperationNotAllowed),
+        (errors.ParametersInvalid, errors.OperationNotAllowed): '_handle_400',
+        # 401: (errors.AuthenticationNotPass),
+        (errors.AuthenticationNotPass): '_handle_401',
+        # 404: (errors.ObjectNotFound)
+        (errors.ObjectNotFound): '_handle_404'
+    }
+
+    def _handle_400(self, e):
+        self.json_error(400, e)
+
+    def _handle_401(self, e):
+        self.json_error(401, e)
+
+    def _handle_404(self, e):
+        self.json_error(404, e)
+
+
+class AuthedHandler(BaseHandler, AuthMixin):
+    PREPARES = ['auth']
+
+    def _prepare_auth(self):
+        self.authenticate()
+
+
+class MainHandler(BaseHandler):
+    def get(self):
+        self.render("index.html")
+
+
+class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin):
+    @define_api([
+        ('recents', False)
+    ])
+    @asynchronous
+    def post(self):
+        if 'recents' in self.params:
+            print 'cache size', len(self.cache)
+            if len(self.cache) > 10:
+                msgs = self.cache[-10:]
+            else:
+                msgs = self.cache
+            self.json_write(msgs)
+            return
+
+        try:
+            self.authenticate()
+            print 'listener connected: ', self.user
+        except errors.AuthenticationNotPass:
+            pass
+        print 'all listeners', len(self.waiters)
+        self.wait_for_messages(self.on_new_messages,
+                               cursor=self.params.get('last_message_id', None))
+
+    def on_new_messages(self, messages):
+        if self.request.connection.stream.closed():
+            return
+        self.json_write(messages)
+
+    def on_connection_close(self):
+        self.cancel_wait()
+
+
+class ChatMessagesHdr(AuthedHandler, MessageMixin, PollMixin):
+    @define_api([
+        ('content', True)
+    ])
+    def post(self):
+        """
+        This method is not asynchronous, so each message
+        append to PollMixin.cache is in time sequence
+        """
+        msg = self.create_message(self.params.content)
+        # extra value
+        msg['color'] = self.user['color']
+        print 'msg ', msg
+
+        self.sendMessage(msg)
+
+
+class LoginHdr(BaseHandler, AuthMixin, UserMixin, PollMixin):
     def get(self):
         self.render('login.html', message='Welcome')
 
@@ -228,8 +272,8 @@ class LoginHdr(BaseHandler, AuthMixin, UserMixin, MessageMixin):
                 password=self.params.get('password', None))
         else:
             user = cur.next()
-            # if 'password' in self.params:
-            # needs password checking
+
+            # if user has password
             if not user['is_anonymous']:
                 if not 'password' in self.params:
                     raise errors.AuthenticationNotPass('Need password')
@@ -250,11 +294,10 @@ class LoginHdr(BaseHandler, AuthMixin, UserMixin, MessageMixin):
 
 class LogoutHdr(BaseHandler):
     def get(self):
-        self.clear_cookie("user")
-        self.write("You are now logged out")
+        self.clear_cookie("user_id")
 
 
-class RoomHdr(BaseHandler, MessageMixin):
+class RoomHdr(BaseHandler, PollMixin):
     def get(self):
         info = {
             'online_users': self.get_online_users()
@@ -264,46 +307,19 @@ class RoomHdr(BaseHandler, MessageMixin):
 
 class UsersMeHdr(AuthedHandler):
     def get(self):
-        print self.user
         self.json_write(self.user)
-
-
-# class Application(tornado.web.Application):
-#     def __init__(self):
-#         handlers = [
-#             (r"/", MainHandler),
-#             (r"/auth/login", LoginHdr),
-#             (r"/auth/logout", LogoutHdr),
-#             (r"/a/message/new", MessageNewHdr),
-#             (r"/a/message/updates", MessageUpdatesHandler),
-#             (r"/room", RoomHdr),
-#             (r"/users/me", UsersMeHdr),
-#         ]
-#         settings = dict(
-#             cookie_secret="43oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
-#             login_url="/auth/login",
-#             template_path=os.path.join(os.path.dirname(__file__), "templates"),
-#             static_path=os.path.join(os.path.dirname(__file__), "static"),
-#             #xsrf_cookies=True,
-#             autoescape="xhtml_escape",
-#             debug=True
-#         )
-#         tornado.web.Application.__init__(self, handlers, **settings)
 
 
 handlers = [
     (r"/", MainHandler),
     (r"/auth/login", LoginHdr),
     (r"/auth/logout", LogoutHdr),
-    (r"/a/message/new", MessageNewHdr),
-    (r"/a/message/updates", MessageUpdatesHandler),
+    (r"/chat/messages", ChatMessagesHdr),
+    (r"/chat/messages/updates", ChatMessagesUpdateHdr),
     (r"/room", RoomHdr),
     (r"/users/me", UsersMeHdr),
 ]
 
-# if torext.settings['DEBUG']:
-#     handlers_str = 'urls:\n' + '\n'.join(['  %s' % str(i) for i in handlers])
-#     logging.info(handlers_str)
 
 app = TorextApp(handlers)
 

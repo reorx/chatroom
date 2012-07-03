@@ -28,7 +28,8 @@ require([
         events: {
             'click a.tip': 'showPasswordInput',
             'click a.cancel': 'hidePasswordInput',
-            'click .colors a': 'selectColor'
+            'click .colors a': 'selectColor',
+            'click .userinfo .logout': 'logout'
             // 'click .loginTitle': 'login'
         },
 
@@ -141,27 +142,6 @@ require([
             });
         },
 
-        authenticate: function() {
-            var _this = this;
-            $.ajax({
-                url: '/users/me',
-                type: 'GET',
-                success: function(json) {
-                    _this.showUserinfo(json);
-                    // because yourself logged in
-                    _this.updateRoominfo();
-                },
-                error: function() {
-                    _this.$('.loginTitle').bind('click', function() {
-                        _this.login();
-                    });
-                },
-                complete: function() {
-                    _this.status(0);
-                }
-            });
-        },
-
         login: function() {
             var data = {
                 username: this.$username.val(),
@@ -175,12 +155,11 @@ require([
                 type: 'POST',
                 data: data,
                 success: function(json) {
-                    _this.$('.loginTitle').unbind('click');
-                    _this.showUserinfo(json);
+                    _this.status('You have logged in', 0);
+                    _this.user = json;
 
-                    // repoll
-                    Updater.repoll();
-                    // and update roominfo
+                    chatView.repoll();
+                    _this.showUserinfo(json);
                     _this.updateRoominfo();
                 },
                 error: function(xhr) {
@@ -189,27 +168,34 @@ require([
             });
         },
 
-        showUserinfo: function(user) {
+        _showAndHide: function(toShow, toHide) {
             var $login = this.$('.login'),
                 $userinfo = this.$('.userinfo'),
                 wrapper = $login.parent();
 
-            // change userinfo
-            $userinfo.find('.username').html(user.username);
-            //.css({'position': 'absolute', 'visibility': 'hidden'})
-
-            // animation
             wrapper.height(wrapper.height());
 
-            $login.fadeOut(function() {
-                var h = $login.height() < $userinfo.height() ? $login.height() : $userinfo.height();
-                console.log('change to', h);
+            // console.log('toShow', toShow, 'height', toShow.height());
+            toHide.fadeOut(function() {
                 wrapper.animate({
-                    height: h + 'px'
+                    height: toShow.height() + 'px'
                 }, 500, function() {
-                    $userinfo.fadeIn();
+                    toShow.fadeIn();
                 });
             });
+        },
+
+        showUserinfo: function(user) {
+            chatView.enableInput();
+
+            // unbind login button
+            this.$('.loginTitle').unbind('click');
+
+            // change userinfo
+            this.$('.userinfo .username').html(user.username);
+
+            // animation
+            this._showAndHide( this.$('.userinfo'), this.$('.login'));
 
             // change title
             this.$('.title.loginTitle').removeClass('green')
@@ -220,26 +206,82 @@ require([
         },
 
         showLogin: function() {
-            // this.$('.login')
             var _this = this;
+
+            chatView.disableInput();
+
+            // bind login button
             this.$('.loginTitle').bind('click', function() {
                 _this.login();
+            });
+
+            // if .login already visible (first load), return the function
+            if (this.$('.login').is(':visible')) return;
+
+            // animation
+            this._showAndHide( this.$('.login'), this.$('.userinfo'));
+
+            // change title
+            this.$('.title.loginTitle').addClass('green')
+                .find('.text').fadeOut(function() {
+                    $(this).html('Login').fadeIn();
+                });
+        },
+
+        authenticate: function() {
+            var _this = this;
+            $.ajax({
+                url: '/users/me',
+                type: 'GET',
+                success: function(json) {
+                    _this.user = json;
+                    _this.showUserinfo(json);
+                },
+                error: function() {
+                    _this.showLogin();
+                },
+                complete: function() {
+                    _this.updateRoominfo();
+                    _this.status(0);
+                }
+            });
+        },
+
+        logout: function() {
+            var _this = this;
+            $.ajax({
+                url: '/auth/logout',
+                type: 'GET',
+                success: function() {
+                    _this.status('You have logged out', 0, 'warning');
+
+                    chatView.repoll();
+                    _this.showLogin();
+                    _this.updateRoominfo();
+                }
             });
         }
     });
 
     var ChatView = Backbone.View.extend({
         events: {
-            'keypress .input textarea': 'postMessage'
+            'keypress .input textarea': 'checkInput'
         },
 
         initialize: function() {
+            this.errorSleepTime = 500;
             this.$input = this.$('.input textarea');
+            this.chatsBody$ = this.$('.chats .body');
+            this.dialog_tmpl = $('#tmpl-dialog').html();
+            this.message_tmpl = $('#tmpl-message').html();
+            this.lastMessage = null;
+
             this.disableInput();
         },
 
         enableInput: function() {
             this.$input.removeAttr('readonly')
+                .attr('placeholder', 'New message')
                 .removeClass('disable');
         },
 
@@ -249,94 +291,170 @@ require([
                 .addClass('disable');
         },
 
-        postMessage: function(e) {
+        checkInput: function(e) {
             if (e.keyCode == 13) {
+                this.postMessage();
+                $(e.currentTarget).val('').select();
+                return false;
             }
-        }
+        },
 
-    });
+        poll: function(isFirst) {
+            console.log('-> poll this:', this);
+            var _this = this,
+                data = {};
 
-    var updater = {
-        errorSleepTime: 500,
-        cursor: null,
+            // get recents on first poll
+            if (isFirst) {
+                console.log('-> first poll');
+                data.recents = true;
+            }
 
-        poll: function() {
-            var args = {"_xsrf": $.cookie("_xsrf")};
-            if (updater.cursor) args.cursor = updater.cursor;
             this.connection = $.ajax({
-                url: "/a/message/updates",
+                url: "/chat/messages/updates",
                 type: "POST",
-                dataType: "text",
-                data: $.param(args),
-                success: updater.onSuccess,
-                error: updater.onError
+                data: data,
+                success: function(json) {
+                    // console.log('poll json', json);
+                    _this.receiveMessages(json);
+                },
+                error: function(xhr) {
+                    // console.log('error, repoll', xhr);
+
+                    if (xhr.statusText == 'abort') {
+                        console.log('-> poll in error');
+                        _this.poll();
+                    } else {
+                        // force passing the right 'this'
+                        _this.errorSleepTime += 1000;
+                        console.log("Unexpected poll error; sleeping for", _this.errorSleepTime, "ms");
+                        (function () {
+                            window.setTimeout(_this.poll, _this.errorSleepTime);
+                        }).call(_this);
+                    }
+                }
             });
         },
 
         repoll: function() {
             if (this.connection) {
+                console.log('-> repoll');
+                // after aborted, it will automatically start polling
                 this.connection.abort();
-                this.poll();
+                // this.poll();
             }
         },
 
-        onSuccess: function(response) {
-            try {
-                updater.newMessages(eval("(" + response + ")"));
-            } catch (e) {
-                updater.onError();
-                return;
-            }
-            updater.errorSleepTime = 500;
-            window.setTimeout(updater.poll, 0);
+        postMessage: function(e) {
+            var message = {
+                content: this.$input.val()
+            },
+                _this = this;
+
+            $.ajax({
+                url: '/chat/messages',
+                type: 'POST',
+                data: message,
+                error: function(xhr) {
+                    panelView.ajaxError(xhr);
+                }
+            });
         },
 
-        onError: function(response) {
-            updater.errorSleepTime *= 2;
-            console.log("Poll error; sleeping for", updater.errorSleepTime, "ms");
-            window.setTimeout(updater.poll, updater.errorSleepTime);
-        },
-
-        newMessages: function(response) {
-            if (!response.messages) return;
-            updater.cursor = response.cursor;
-            var messages = response.messages;
-            updater.cursor = messages[messages.length - 1].id;
-            console.log(messages.length, "new messages, cursor:", updater.cursor);
-            for (var i = 0; i < messages.length; i++) {
-                updater.showMessage(messages[i]);
+        receiveMessages: function(json) {
+            var _this = this;
+            if (json instanceof Array) {
+                // Make sure messages have been sorted by time on the server
+                _.each(json, function(message, loop) {
+                    _this.showMessage(message);
+                });
+            } else {
+                _this.showMessage(json);
             }
+
+            this.errorSleepTime = 500;
+            this.poll();
         },
 
         showMessage: function(message) {
-            var existing = $("#m" + message.id);
-            if (existing.length > 0) return;
-            // var node = $(message.html);
-            console.log('function showMessage');
-            var node = $('<div class="message" id="m' + message.id + '"><b>' +
-                message.from + ': </b>' + message.body + '</div>');
-            node.hide();
-            console.log('node', node);
-            $("#chat .messages").append(node);
-            node.slideDown();
-        }
-    };
+            /*
+             * message
+             *  - username
+             *  - content
+             *  - time
+             *  - datetime
+             *
+             *  - hourtime (extra)
+             *  - domId (extra)
+             */
+            var lastMessage = this.lastMessage,
+                date = new Date(message.time * 1000),
+                hourtime = date.getHours() + ':' + date.getMinutes();
 
-    var Updater = updater;
+            function getYmdHM(time) {
+                var dt = new Date(time * 1000);
+                // console.log('dt', dt, typeof dt);
+                var l = [dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), dt.getHours(), dt.getMinutes()],
+                    s = '';
+                _.each(l, function(i) {
+                    s += l.toString();
+                });
+                return s;
+            }
+
+            var needDialog = true, dialog$,
+                message$,
+                messageContext = {
+                    content: message.content,
+                    hourtime: hourtime
+                };
+
+            if (lastMessage) {
+                if (message.username == lastMessage.username) {
+                    needDialog = false;
+                    if (getYmdHM(message.time) == getYmdHM(lastMessage.time))
+                        delete messageContext.hourtime;
+                }
+            }
+
+            if (needDialog) {
+                dialog$ = $.tmpl(this.dialog_tmpl, {
+                    username: message.username,
+                    color: message.color
+                });
+                // if (lastMessage)
+                //     dialog$.addClass('split');
+            }
+
+            message$ = $.tmpl(this.message_tmpl, messageContext);
+
+            console.log('dialog$', dialog$);
+            console.log('message$', message$);
+            if (dialog$) {
+                dialog$.find('.messages').append(message$);
+                this.chatsBody$.append(dialog$);
+            } else {
+                this.$('.dialog:last').find('.messages').append(message$);
+            }
+            this.$('.chats').animate({scrollTop: this.$('.chats').height()}, 300);
+
+            this.lastMessage = message;
+        }
+    });
+
+    // will-be-defined-variables of this scope
+    var panelView, chatView;
 
     domReady(function() {
         // views
-        var panelView = new PanelView({el: $('#panel')}),
-            chatView = new ChatView({el: $('#main')});
+        panelView = new PanelView({el: $('#panel')}),
+        chatView = new ChatView({el: $('#main')});
         // debug
-        // window.panelView = panelView;
-        // window.chatView = chatView;
+        window.panelView = panelView;
+        window.chatView = chatView;
 
         // connect to server
-        Updater.poll();
-
-        // update roominfo
-        panelView.updateRoominfo();
+        chatView.poll(true);
 
         // authenticate user
         panelView.authenticate();

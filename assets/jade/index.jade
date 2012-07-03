@@ -52,6 +52,8 @@ body
         .userinfo(style='display: none;')
           p Username
             b.username
+          p Actions
+            a(href='#').logout logout
 
       .title.folded.sec1
         span.text Roominfo
@@ -64,22 +66,24 @@ body
           //- .item(username='reorx') R
 
     #chat
-      .messages
-        .ruler
+      .ruler
+      .chats.prettyscrollbar
         .body
-          .message
-            .username Reorx
-            .contents
-              .content
-                .text Hello everybody, welcome to Chatroom ~~
-                .datetime 22:41
+          //- .dialog
+          //-   .username Reorx
+          //-   .contents
+          //-     .content
+          //-       .text Hello everybody, welcome to Chatroom ~~
+          //-       .datetime 22:41
       .input
         textarea#messageInput(readonly='readonly')
 
-    #tmpl-message.tmpl
-      .message
-        .username Reorx
-        .contents
-          .content
-            .text Hello everybody, welcome to Chatroom ~~
-            .datetime 22:41
+  #tmpl-dialog.tmpl
+    .dialog
+      .username_bg(style='background-color: ${color};')
+      .username(style='color: ${color};') ${username}
+      .messages
+  #tmpl-message.tmpl
+    .item
+      .text ${content}
+      .datetime ${hourtime}
