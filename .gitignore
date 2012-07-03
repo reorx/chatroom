@@ -1,3 +1,6 @@
-static/
+static/css/*
+static/js/*.js
+static/js/libs/*
+.bak/
 templates/
 .virtualenv
