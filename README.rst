@@ -8,13 +8,12 @@ Design for simple and convenience chatting
 TODO
 ----
 
- - jquery-tmpl .message rendering
+ - authenticate, last login time
 
- - logout button
+ - change color option
 
  - system message
 
  - .roominfo users slide show
 
-
- - backbone, only view
+ - backbone, only view version
