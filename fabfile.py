@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from fabric.api import run, hosts, abort, local, cd
+from fabric.api import run, hosts, abort, local, cd, lcd
 from fabric.contrib.console import confirm
 
 HOST = 'root@reorx.com'
@@ -14,18 +14,31 @@ def test_conn():
     run('pwd')
 
 
+def push():
+    with lcd('~/workspace/current/torext'):
+        local('git push')
+    local('git push')
+
+
 @hosts(HOST)
 def update():
+    push()
+
+    with cd('/root/projects/torext'):
+        res = run('git pull')
+
     with cd('/root/projects/chatroom'):
         res = run('git pull')
         if res.failed:
             abort('code update failed, abort')
-        res = run('cp Makefile.product Makefile && make')
+        run('cp Makefile.product Makefile && make')
         if res.failed:
             abort('make failed, abort')
 
     with cd('/root/supervisor'):
-        res = run('supervisorctl restart chatroom')
+        run('cp /root/projects/chatroom/chatroom.conf conf.d/')
+        run('kill `cat supervisord.pid`')
+        res = run('supervisord')
         if res.failed:
             abort('restart from supervisor failed, abort')
 
