@@ -1,6 +1,12 @@
 static/css/*
-static/js/*.js
+!static/css/.gitignore
+static/js/*
+!static/js/.gitignore
 static/js/libs/*
+!static/js/libs/.gitignore
+
 .bak/
 templates/
 .virtualenv
+
+Makefile
