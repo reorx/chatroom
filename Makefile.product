@@ -6,11 +6,11 @@ CSS = $(shell find assets/styl/ -name '*.styl' |\
 
 JS = $(shell find assets/js/ -name '*.js' | sed -e 's/assets\//static\//g')
 
-DIRS = templates static/css static/js
+DIRS = templates static/css static/js/libs
 
 all: $(DIRS) $(HTML) $(CSS) $(JS)
 
-templates static/css static/js:
+templates static/css static/js/libs:
 	mkdir -p $@
 
 templates/%.html: assets/jade/%.jade
@@ -23,4 +23,4 @@ static/js/%.js: assets/js/%.js
 	uglifyjs -o $@ $<
 
 clean:
-	rm -rf templates/ static/
+	rm -rf templates/ static/js/ static/css/

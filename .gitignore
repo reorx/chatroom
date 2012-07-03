@@ -1,9 +1,5 @@
-static/css/*
-!static/css/.gitignore
-static/js/*
-!static/js/.gitignore
-static/js/libs/*
-!static/js/libs/.gitignore
+static/css/
+static/js/
 
 .bak/
 templates/
