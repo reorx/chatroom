@@ -16,13 +16,18 @@ def test_conn():
 
 @hosts(HOST)
 def update():
-    with cd('cd /root/projects/chatroom'):
+    with cd('/root/projects/chatroom'):
         res = run('git pull')
         if res.failed:
             abort('code update failed, abort')
-        res = run('make')
+        res = run('cp Makefile.product Makefile && make')
         if res.failed:
             abort('make failed, abort')
+
+    with cd('/root/supervisor'):
+        res = run('supervisorctl restart chatroom')
+        if res.failed:
+            abort('restart from supervisor failed, abort')
 
     #if default_file not in args:
         #if confirm('Also update ziproxy.conf, right ?'):

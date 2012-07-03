@@ -5,7 +5,7 @@
 //     For all details and documentation:
 //     http://backbonejs.org
 
-define('backbone', ['underscore'], function(_) {
+define('backbone', ['underscore', 'jquery'], function(_) {
 
   // Initial Setup
   // -------------
