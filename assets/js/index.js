@@ -30,7 +30,6 @@ require([
             'click a.cancel': 'hidePasswordInput',
             'click .colors a': 'selectColor',
             'click .userinfo .logout': 'logout'
-            // 'click .loginTitle': 'login'
         },
 
         initialize: function() {
@@ -233,6 +232,8 @@ require([
             $.ajax({
                 url: '/users/me',
                 type: 'GET',
+                // IMPORTANT Stop using asynchronous here
+                async: false,
                 success: function(json) {
                     _this.user = json;
                     _this.showUserinfo(json);
@@ -299,15 +300,17 @@ require([
             }
         },
 
-        poll: function(isFirst) {
-            console.log('-> poll this:', this);
+        poll: function(reset) {
+            console.log('-> poll(); this:', this);
             var _this = this,
                 data = {};
 
-            // get recents on first poll
-            if (isFirst) {
-                console.log('-> first poll');
-                data.recents = true;
+            if (reset) {
+                this.lastMessage = null;
+            }
+
+            if (this.lastMessage) {
+                data.last_message_id = this.lastMessage._id;
             }
 
             this.connection = $.ajax({
@@ -325,14 +328,11 @@ require([
                         console.log('-> repoll by function');
                         _this.poll();
                     } else {
-                        // force passing the right 'this'
+                        if (xhr.responseText) console.log('Poll error:', $.parseJSON(xhr.responseText).error);
+
                         _this.errorSleepTime += 1000;
                         panelView.status('Connection interrupted, reconnect in ' + _this.errorSleepTime / 1000 + 's',
                             0, 'warning');
-                        console.log("Unexpected poll error; sleeping for", _this.errorSleepTime, "ms");
-                        // (function () {
-                        //     window.setTimeout(_this.poll, _this.errorSleepTime);
-                        // }).call(_this);
                         setTimeout($.proxy(_this.poll, _this), _this.errorSleepTime);
                     }
                 }
@@ -365,6 +365,7 @@ require([
         },
 
         receiveMessages: function(json) {
+            console.log('-> just receiveMessages');
             var _this = this;
             if (json instanceof Array) {
                 // Make sure messages have been sorted by time on the server
@@ -376,6 +377,7 @@ require([
             }
 
             this.errorSleepTime = 500;
+            console.log('-> poll after receiveMessages');
             this.poll();
         },
 
@@ -456,11 +458,16 @@ require([
         window.panelView = panelView;
         window.chatView = chatView;
 
-        // connect to server
-        chatView.poll(true);
-
         // authenticate user
+        /*
+         * API requesting should following a sequence
+         *  1. /users/me
+         *  2. /chat/messages/update    /room
+         */
         panelView.authenticate();
+
+        // connect to server
+        chatView.poll();
 
     });
 });
