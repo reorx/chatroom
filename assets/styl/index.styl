@@ -97,7 +97,7 @@ html, body
   box-shadow -5px 5px 5px #bbb
   border-right 1px solid #eee
 
-  > .title
+  .title
     position relative
     width 100px
     height 30px
@@ -105,7 +105,7 @@ html, body
     left 188px
     margin 20px 0 10px 0
     line-height 30px
-  > .title .arrow
+  .title .arrow
     top 31px
 
   p
@@ -152,12 +152,14 @@ html, body
       z-index 9999
 
   .status
-    height 50px
+    min-height 50px
     background #fff
     margin-top 15px
     box-shadow 0 0 8px #ccc inset
     position relative
-    .title
+    // overflow hidden
+    -webkit-transition height 1s ease-in-out
+    > .brand
       position absolute
       left 110px
       width 50px
@@ -169,12 +171,11 @@ html, body
       text-align center
       color #041F3E
     .content
-      position absolute
-      left 0; right 0; bottom 5px
-      top 25px
+      padding 25px 0 10px 0
       text-align center
       font-size 16px
       // font-family helvetica, arial, sans-serif
+      -webkit-transition height 1s ease-in-out
     .content.info
       color #041F3E
     .content.warning

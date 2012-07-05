@@ -227,27 +227,6 @@ require([
                 });
         },
 
-        authenticate: function() {
-            var _this = this;
-            $.ajax({
-                url: '/users/me',
-                type: 'GET',
-                // IMPORTANT Stop using asynchronous here
-                async: false,
-                success: function(json) {
-                    _this.user = json;
-                    _this.showUserinfo(json);
-                },
-                error: function() {
-                    _this.showLogin();
-                },
-                complete: function() {
-                    _this.updateRoominfo();
-                    _this.status(0);
-                }
-            });
-        },
-
         logout: function() {
             var _this = this;
             $.ajax({
@@ -300,18 +279,16 @@ require([
             }
         },
 
-        poll: function(reset) {
+        poll: function(anonymous) {
             console.log('-> poll(); this:', this);
             var _this = this,
                 data = {};
 
-            if (reset) {
-                this.lastMessage = null;
-            }
+            if (anonymous)
+                data.anonymous = true;
 
-            if (this.lastMessage) {
+            if (this.lastMessage)
                 data.last_message_id = this.lastMessage._id;
-            }
 
             this.connection = $.ajax({
                 url: "/chat/messages/updates",
@@ -464,10 +441,47 @@ require([
          *  1. /users/me
          *  2. /chat/messages/update    /room
          */
-        panelView.authenticate();
+        // panelView.authenticate();
 
-        // connect to server
-        chatView.poll();
+
+        // authenticate: function() {
+        // var _this = this;
+        $.ajax({
+            url: '/users/me',
+            type: 'GET',
+            // IMPORTANT Stop using asynchronous here
+            // async: false,
+            success: function(json) {
+                panelView.user = json;
+                if (json.is_online) {
+
+                    panelView.status('You have logged in, this page will be identified as anonymous', 1, 'warning');
+
+                    $('#wrapper-titlelogin').height($('#wrapper-titlelogin').height());
+                    panelView.$('.loginTitle').fadeOut();
+                    panelView.$('.login').fadeOut(function() {
+                        $('#wrapper-titlelogin').animate({
+                            height: '0px'
+                        });
+                    });
+                    chatView.poll(true);
+                } else {
+                    panelView.showUserinfo(json);
+                    panelView.status(0);
+                }
+
+            },
+            error: function() {
+                panelView.showLogin();
+
+                chatView.poll();
+                panelView.status(0);
+            },
+            complete: function() {
+                panelView.updateRoominfo();
+            }
+        });
+        // },
 
     });
 });

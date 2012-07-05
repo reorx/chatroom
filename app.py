@@ -234,14 +234,18 @@ class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin):
     @asynchronous
     @define_api([
         # ('recents', False)
-        ('last_message_id', False, _validate_objectid)
+        ('last_message_id', False, _validate_objectid),
+        ('anonymous', False)
     ])
     def post(self):
-        try:
-            self.authenticate()
-            print 'user connected:', self.user['username']
-        except errors.AuthenticationNotPass:
-            pass
+        print '/chat/messages/updates params', self.params
+
+        if not 'anonymous' in self.params:
+            try:
+                self.authenticate()
+                print 'user connected:', self.user['username']
+            except errors.AuthenticationNotPass:
+                pass
 
         if 'last_message_id' in self.params:
             self.wait_for_messages(self.on_new_messages, id=self.params.last_message_id)

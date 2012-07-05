@@ -15,39 +15,40 @@ body
         .deco_underline
 
       .status
-        .title Status
+        .brand Status
         .content.info
 
-      .title.folded.sec0.loginTitle.green
-        span.text Login
-        span.arrow
+      #wrapper-titlelogin
+        .title.folded.sec0.loginTitle.green
+          span.text Login
+          span.arrow
 
-      .wrapper
-        .login
-          .inputWrapper
-            input(type='text', name='username', placeholder='username')
-            //- img.tip(src='{{ static_url(\'img/lock.png\') }}')
-            a.tip
-            input(type='password', name='password', placeholder='password', style='display: none;')
-            a.cancel(style='display: none;') x
-          ul.colors
-            li
-              a(color='#3A3A3A')
-              span.cursor
-            li
-              a(color='#B00B0B')
-            li
-              a(color='#B0770B')
-            li
-              a(color='#0BB038')
-            li
-              a(color='#0B77B0')
-            li
-              a(color='#5B0BB0')
-            li
-              a(color='#B00B69')
-          //- .submitWrapper
-          //-   input(type='submit', value='Sign&Log In').green-gradient-button
+        .wrapper
+          .login
+            .inputWrapper
+              input(type='text', name='username', placeholder='username')
+              //- img.tip(src='{{ static_url(\'img/lock.png\') }}')
+              a.tip
+              input(type='password', name='password', placeholder='password', style='display: none;')
+              a.cancel(style='display: none;') x
+            ul.colors
+              li
+                a(color='#3A3A3A')
+                span.cursor
+              li
+                a(color='#B00B0B')
+              li
+                a(color='#B0770B')
+              li
+                a(color='#0BB038')
+              li
+                a(color='#0B77B0')
+              li
+                a(color='#5B0BB0')
+              li
+                a(color='#B00B69')
+            //- .submitWrapper
+            //-   input(type='submit', value='Sign&Log In').green-gradient-button
 
         .userinfo(style='display: none;')
           p Username
