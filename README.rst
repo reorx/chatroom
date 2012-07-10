@@ -8,6 +8,8 @@ Design for simple and convenience chatting
 TODO
 ----
 
+ - input box style fix (on different browsers)
+
  - google analysis
 
  - recover old messages from database on restart
