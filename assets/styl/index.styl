@@ -74,6 +74,15 @@ html, body
               line-height 20px
               font-size 14px
               color #888
+      .dialog.separate
+        background #FBF8DA
+        .username
+          color #CA0000
+        .username_bg
+          background #CA0000
+        .text
+          color #888
+          font-style italic
 
   .input
     position absolute
@@ -103,7 +112,7 @@ html, body
     height 30px
     padding-left 15px
     left 188px
-    margin 20px 0 10px 0
+    margin 20px 0 15px 0
     line-height 30px
   .title .arrow
     top 31px
@@ -111,6 +120,7 @@ html, body
   p
     font-size 15px
     color #444
+    margin 0 0 10px 0
     b, a
       margin-left 10px
       color #B00B0B
@@ -152,12 +162,12 @@ html, body
       z-index 9999
 
   .status
-    min-height 50px
+    height 60px
     background #fff
     margin-top 15px
     box-shadow 0 0 8px #ccc inset
     position relative
-    // overflow hidden
+    overflow hidden
     -webkit-transition height 1s ease-in-out
     > .brand
       position absolute
@@ -183,11 +193,11 @@ html, body
     .content.error
       color #9C1E04
 
-  .wrapper
+  .login, .userinfo
     overflow hidden
 
   .login
-    padding 5px 0
+    // padding 5px 0
     // text-align center
     input
       display block
@@ -271,11 +281,6 @@ html, body
         width 80px
         font-size 11px
 
-  .userinfo
-    p
-      margin 0
-      margin-top 10px
-
   .roominfo
     .users
       box-shadow 0 0 10px #888 inset
@@ -353,6 +358,7 @@ html, body
     width: 8px;
     height: 8px;
     border-left: solid 1 #000
+    background-color: rgba(122, 161, 185, 0.5);
 }
 
 .prettyscrollbar::-webkit-scrollbar-button:start:decrement {

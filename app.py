@@ -57,7 +57,7 @@ class UserMixin(object):
         is_anonymous
         password
         color
-        logout_time
+        offline_time
     """
     def generate_password(self, raw):
         salt = 'Est Sularus oth Mithas'
@@ -85,6 +85,15 @@ class UserMixin(object):
         _id = self.db.users.save(user, safe=True)
         if not _id:
             raise errors.DatabaseError('mongodb insert failed: %' % user)
+        return _id
+
+    def update_user(self, data):
+        _id = self.db.users.update(
+            {'_id': self.user['_id']},
+            {'$set': data},
+            safe=True)
+        if not _id:
+            raise errors.DatabaseError('mongodb save failed: %' % data)
         return _id
 
 
@@ -122,67 +131,50 @@ class PollMixin(object):
     waiters = set()
     cache = []
     cache_size = 200
-    _online_users = 0
+    _online_users_numbers = 0
 
     def get_online_users(self):
-        cls = PollMixin
-        # return [i.im_self.user for i in cls.waiters if hasattr(i.im_self, 'user')]
-        return cls._online_users
+        return PollMixin._online_users_numbers
 
     def is_online(self, username):
         cls = PollMixin
-        for i in cls.waiters:
-            hdr = i.im_self
+        for hdr in cls.waiters:
             if hasattr(hdr, 'user') and hdr.user['username'] == username.lower():
                 return True
         return False
 
-    def wait_for_messages(self, callback, id=None):
-        cls = PollMixin
+    def send_messages(self, msgs):
+        if self.request.connection.stream.closed():
+            return
 
-        if id and len(PollMixin.cache) != 0:
-            # need to load some recent messages
-            if cls.cache[-1]['_id'] != id:
-                pos = None
-                for i in xrange(len(cls.cache)):
-                    if cls.cache[i]['_id'] == id:
-                        pos = i
-                        break
-                if pos is not None:
-                    callback(cls.cache[pos:])
-                    return
-                else:
-                    logging.warning('Could positioning the last message in cache, response error')
-                    raise errors.OperationNotAllowed('Could not find the last message id, try polling without id')
+        if isinstance(msgs, dict):
+            msgs = [msgs, ]
 
-        cls.waiters.add(callback)
+        d = {
+            'messages': msgs,
+            'online_users_number': PollMixin._online_users_numbers
+        }
 
-        if hasattr(self, 'user'):
-            cls._online_users += 1
+        self.json_write(d)
 
-        print 'listeners:', len(cls.waiters)
-
-    def cancel_wait(self):
-        cls = PollMixin
-        cls.waiters.remove(self.on_new_messages)
-
-        if hasattr(self, 'user'):
-            cls._online_users -= 1
-
-    def sendMessage(self, msg):
+    def new_message(self, msg):
         cls = PollMixin
         logging.info("Sending new messages to %r listeners", len(cls.waiters))
 
-        for callback in cls.waiters:
+        # update online users counter
+        cls._online_users_numbers = len([i for i in cls.waiters if hasattr(i, 'user')])
+
+        for hdr in cls.waiters:
             try:
-                callback(msg)
+                hdr.send_messages(msg)
             except:
-                logging.error("Error in waiter callback", exc_info=True)
+                logging.error("Error in waiter`s calling send_message()", exc_info=True)
 
         # clear waiters
         cls.waiters = set()
 
-        # add message to message cache
+    def append_to_cache(self, msg):
+        cls = PollMixin
         cls.cache.append(msg)
         if len(cls.cache) > self.cache_size:
             cls.cache = cls.cache[-self.cache_size:]
@@ -230,7 +222,20 @@ def _validate_objectid(v):
         raise errors.ValidationError('Not a valid objectid string')
 
 
-class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin):
+class ChatMessagesRecentsHdr(BaseHandler, PollMixin):
+    def get(self):
+        cache = PollMixin.cache
+        if len(cache) == 0:
+            self.send_messages([])
+        else:
+            if len(cache) > 10:
+                msgs = cache[-10:]
+            else:
+                msgs = cache
+            self.send_messages(msgs)
+
+
+class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin, UserMixin):
     @asynchronous
     @define_api([
         # ('recents', False)
@@ -247,24 +252,38 @@ class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin):
             except errors.AuthenticationNotPass:
                 pass
 
-        if 'last_message_id' in self.params:
-            self.wait_for_messages(self.on_new_messages, id=self.params.last_message_id)
-        else:
-            cache = PollMixin.cache
-            if len(cache) == 0:
-                self.wait_for_messages(self.on_new_messages)
-            else:
-                if len(cache) > 10:
-                    msgs = cache[-10:]
-                else:
-                    msgs = cache
-                self.json_write(msgs)
-                return
+        self.wait_for_messages(id=self.params.get('last_message_id', None))
 
-    def on_new_messages(self, messages):
-        if self.request.connection.stream.closed():
-            return
-        self.json_write(messages)
+    def wait_for_messages(self, id=None):
+        cls = PollMixin
+
+        if id and len(PollMixin.cache) != 0:
+            # need to load some recent messages
+            if cls.cache[-1]['_id'] != id:
+                pos = None
+                for i in xrange(len(cls.cache)):
+                    if cls.cache[i]['_id'] == id:
+                        pos = i
+                        break
+                if pos is not None:
+                    self.send_messages(cls.cache[pos:])
+                    return
+                else:
+                    logging.warning('Could positioning the last message in cache, response error')
+                    raise errors.OperationNotAllowed('Could not find the last message id, try polling without id')
+
+        cls.waiters.add(self)
+
+        print 'listeners:', len(cls.waiters)
+
+    def cancel_wait(self):
+        print 'cancel wait'
+        cls = PollMixin
+
+        cls.waiters.remove(self)
+
+        if hasattr(self, 'user'):
+            self.update_user({'offline_time': time.time()})
 
     def on_connection_close(self):
         self.cancel_wait()
@@ -282,9 +301,10 @@ class ChatMessagesHdr(AuthedHandler, MessageMixin, PollMixin):
         msg = self.create_message(self.params.content)
         # extra value
         msg['color'] = self.user['color']
-        print 'msg ', msg
+        # add message to message cache
+        self.append_to_cache(msg)
 
-        self.sendMessage(msg)
+        self.new_message(msg)
 
 
 class LoginHdr(BaseHandler, AuthMixin, UserMixin, PollMixin):
@@ -298,7 +318,7 @@ class LoginHdr(BaseHandler, AuthMixin, UserMixin, PollMixin):
     ])
     def post(self):
         print 'username', self.params.username
-        print 'all users', [i.im_self.user for i in PollMixin.waiters if hasattr(i.im_self, 'user')]
+        print 'all users', [i.user for i in PollMixin.waiters if hasattr(i, 'user')]
         if self.is_online(self.params.username):
             raise errors.AuthenticationNotPass('This user is online')
 
@@ -353,6 +373,7 @@ handlers = [
     (r"/auth/login", LoginHdr),
     (r"/auth/logout", LogoutHdr),
     (r"/chat/messages", ChatMessagesHdr),
+    (r"/chat/messages/recents", ChatMessagesRecentsHdr),
     (r"/chat/messages/updates", ChatMessagesUpdateHdr),
     (r"/room", RoomHdr),
     (r"/users/me", UsersMeHdr),

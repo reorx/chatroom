@@ -14,8 +14,9 @@ require([
     'underscore',
     'backbone',
     'domReady',
+    'utils',
     'jquery-plugins'
-], function($, _, Backbone, domReady) {
+], function($, _, Backbone, domReady, Utils) {
     // test modules
     console.log('index.js');
     // console.log('underscore', _.each);
@@ -128,17 +129,22 @@ require([
             });
         },
 
-        updateRoominfo: function() {
+        updateRoominfo: function(online_users) {
             var _this = this;
-            $.ajax({
-                url: '/room',
-                type: 'GET',
-                success: function(json) {
-                    console.log('ajax success this', this);
-                    _this.$('.roominfo .number').html(json.online_users.length);
-                    // _this.$('.roominfo .users')
-                }
-            });
+            if (online_users) {
+                _this.$('.roominfo .number').html(online_users);
+            } else {
+                $.ajax({
+                    url: '/room',
+                    type: 'GET',
+                    success: function(json) {
+                        console.log('ajax success this', this);
+                        _this.$('.roominfo .number').html(json.online_users.length);
+                        // _this.$('.roominfo .users')
+                    }
+                });
+            }
+
         },
 
         login: function() {
@@ -168,18 +174,21 @@ require([
         },
 
         _showAndHide: function(toShow, toHide) {
-            var $login = this.$('.login'),
-                $userinfo = this.$('.userinfo'),
-                wrapper = $login.parent();
+            toHide.wrap('<div></div>');
+            var wrapper = toHide.parent();
+            toShow.appendTo(wrapper);
 
             wrapper.height(wrapper.height());
 
             // console.log('toShow', toShow, 'height', toShow.height());
             toHide.fadeOut(function() {
+                // wrapper.height(toShow.height());
                 wrapper.animate({
                     height: toShow.height() + 'px'
                 }, 500, function() {
-                    toShow.fadeIn();
+                    toShow.fadeIn(function() {
+                        toShow.unwrap();
+                    });
                 });
             });
         },
@@ -297,6 +306,12 @@ require([
                 success: function(json) {
                     // console.log('poll json', json);
                     _this.receiveMessages(json);
+
+                    // reset retry time counter
+                    _this.errorSleepTime = 500;
+
+                    console.log('-> poll after receiveMessages');
+                    _this.poll();
                 },
                 error: function(xhr) {
                     // console.log('error, repoll', xhr);
@@ -325,6 +340,26 @@ require([
             }
         },
 
+        separateMessages: function(content) {
+            var dialog = $.tmpl($('#tmpl-dialog-separate'), {content: content});
+            this.chatsBody$.append(dialog);
+            this.lastMessage = null;
+        },
+
+        getRecents: function() {
+            var _this = this;
+            $.ajax({
+                type: 'GET',
+                url: '/chat/messages/recents',
+                success: function(json) {
+                    _this.receiveMessages(json);
+                    if (json.messages.length > 0)
+                        _this.separateMessages(
+                            'last message was send on:&nbsp&nbsp' + Utils.getYmdHM(_this.lastMessage.time));
+                }
+            });
+        },
+
         postMessage: function(e) {
             var message = {
                 content: this.$input.val()
@@ -342,20 +377,19 @@ require([
         },
 
         receiveMessages: function(json) {
+            /*
+             * json
+             *  - messages
+             *  - online_users_number
+             */
             console.log('-> just receiveMessages');
             var _this = this;
-            if (json instanceof Array) {
-                // Make sure messages have been sorted by time on the server
-                _.each(json, function(message, loop) {
-                    _this.showMessage(message);
-                });
-            } else {
-                _this.showMessage(json);
-            }
 
-            this.errorSleepTime = 500;
-            console.log('-> poll after receiveMessages');
-            this.poll();
+            _.each(json.messages, function(message, loop) {
+                _this.showMessage(message);
+            });
+
+            panelView.updateRoominfo(json.online_users_number);
         },
 
         showMessage: function(message) {
@@ -371,18 +405,9 @@ require([
              */
             var lastMessage = this.lastMessage,
                 date = new Date(message.time * 1000),
-                hourtime = date.getHours() + ':' + date.getMinutes();
+                hourtime = date.getHours() + ':' + date.getMinutes(),
+                getYmdHM = Utils.getYmdHM;
 
-            function getYmdHM(time) {
-                var dt = new Date(time * 1000);
-                // console.log('dt', dt, typeof dt);
-                var l = [dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), dt.getHours(), dt.getMinutes()],
-                    s = '';
-                _.each(l, function(i) {
-                    s += l.toString();
-                });
-                return s;
-            }
 
             var needDialog = true, dialog$,
                 message$,
@@ -434,6 +459,10 @@ require([
         // debug
         window.panelView = panelView;
         window.chatView = chatView;
+        window.Utils = Utils;
+
+        // load recents
+        chatView.getRecents();
 
         // authenticate user
         /*
@@ -441,35 +470,41 @@ require([
          *  1. /users/me
          *  2. /chat/messages/update    /room
          */
-        // panelView.authenticate();
-
-
-        // authenticate: function() {
-        // var _this = this;
         $.ajax({
             url: '/users/me',
             type: 'GET',
-            // IMPORTANT Stop using asynchronous here
-            // async: false,
             success: function(json) {
                 panelView.user = json;
                 if (json.is_online) {
-
-                    panelView.status('You have logged in, this page will be identified as anonymous', 1, 'warning');
-
-                    $('#wrapper-titlelogin').height($('#wrapper-titlelogin').height());
-                    panelView.$('.loginTitle').fadeOut();
-                    panelView.$('.login').fadeOut(function() {
-                        $('#wrapper-titlelogin').animate({
-                            height: '0px'
-                        });
-                    });
                     chatView.poll(true);
+
+                    panelView.status('Duplicate login', 1, 'warning');
+
+                    var loginTitle = panelView.$('.title.loginTitle'),
+                        login = panelView.$('.login'),
+                        wrapper,
+                        time = 500;
+                    loginTitle.wrap('<div></div>');
+                    wrapper = loginTitle.parent();
+                    login.appendTo(wrapper);
+                    wrapper.height(wrapper.height());
+
+                    loginTitle.fadeOut(time);
+                    login.fadeOut(time);
+                    setTimeout(function() {
+                        wrapper.animate({
+                            height: '0px'
+                        }, time + 100, function() {
+                            loginTitle.unwrap();
+                        });
+                    }, time);
                 } else {
+                    chatView.poll();
+
                     panelView.showUserinfo(json);
                     panelView.status(0);
                 }
-
+                console.log('end success()');
             },
             error: function() {
                 panelView.showLogin();
@@ -478,10 +513,10 @@ require([
                 panelView.status(0);
             },
             complete: function() {
+                console.log('start complete()');
                 panelView.updateRoominfo();
             }
         });
-        // },
 
     });
 });

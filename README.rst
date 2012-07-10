@@ -10,14 +10,14 @@ TODO
 
  - use nginx to serve static files (with optimizations like gzip)
 
- - include online_users number in /chat/messages/updates' response
+ - old messages on restart
 
- - authenticate, last login time
-
- - change color option
+ - shut up
 
  - system message
 
  - .roominfo users slide show
+
+ - change color option
 
  - backbone, only view version
