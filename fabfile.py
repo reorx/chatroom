@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from fabric.api import run, hosts, abort, local, cd, lcd
-from fabric.contrib.console import confirm
+# from fabric.contrib.console import confirm
 
 HOST = 'root@reorx.com'
 
@@ -36,11 +36,17 @@ def update():
             abort('make failed, abort')
 
     with cd('/root/supervisor'):
-        run('cp /root/projects/chatroom/chatroom.conf conf.d/')
+        run('cp /root/projects/chatroom/supervisor.chatroom.conf conf.d/')
         run('kill `cat supervisord.pid`')
         res = run('supervisord')
         if res.failed:
-            abort('restart from supervisor failed, abort')
+            abort('restart supervisor failed, abort')
+
+    with cd('/etc/nginx'):
+        run('cp /root/projects/chatroom/nginx.chatroom.conf conf.d/')
+        res = run('service nginx restart')
+        if res.failed:
+            abort('restart nginx failed, abort')
 
     #if default_file not in args:
         #if confirm('Also update ziproxy.conf, right ?'):
