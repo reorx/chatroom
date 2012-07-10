@@ -8,7 +8,7 @@ Design for simple and convenience chatting
 TODO
 ----
 
- - use nginx to serve static files (with optimizations like gzip)
+ - google analysis
 
  - old messages on restart
 

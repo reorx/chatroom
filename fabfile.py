@@ -31,9 +31,10 @@ def update():
         res = run('git pull')
         if res.failed:
             abort('code update failed, abort')
-        run('cp Makefile.product Makefile && make')
+        res = run('cp Makefile.product Makefile && make')
         if res.failed:
             abort('make failed, abort')
+        run('cp static /home/admin -r')
 
     with cd('/root/supervisor'):
         run('cp /root/projects/chatroom/supervisor.chatroom.conf conf.d/')
@@ -48,35 +49,13 @@ def update():
         if res.failed:
             abort('restart nginx failed, abort')
 
-    #if default_file not in args:
-        #if confirm('Also update ziproxy.conf, right ?'):
-            #args = (default_file, ) + args
 
-    #print '1. backup server side configs'
-    #res = run('tar czf /root/ziproxy.confbak.tar.gz /etc/ziproxy')
-    #if res.failed:
-        #abort('backup failed, abort')
-
-    #print '2. copy files'
-    #local('scp %s %s:/etc/ziproxy/' % (' '.join(args), HOST))
-
-    #print '3. restart service'
-    #res = run('service ziproxy restart')
-    #if res.failed:
-        #res = run('service ziproxy start')
-
-    #if res.failed:
-        #print 'Failed !'
-    #else:
-        #print 'OK !'
+@hosts(HOST)
+def drop_db():
+    with cd('/root/projects/chatroom'):
+        run('python manager.py drop_db')
 
 
-def recover_server():
-    """
-    do this if update_server failed
-    """
+@hosts(HOST)
+def backup_db():
     pass
-
-
-def sync_log():
-    local('scp %s:/var/log/ziproxy/*.log log/' % HOST)
