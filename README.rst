@@ -10,9 +10,9 @@ TODO
 
  - google analysis
 
- - old messages on restart
+ - recover old messages from database on restart
 
- - shut up
+ - periodic mute for chatting too quickly
 
  - system message
 
