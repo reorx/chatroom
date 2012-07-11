@@ -5,6 +5,7 @@ require.config({
         'underscore': 'libs/underscore-amd',
         'backbone': 'libs/backbone-amd',
         'domReady': 'libs/domReady',
+        'dateformat': 'libs/dateformat',
         'jquery-plugins': 'libs/jquery-plugins'
     }
 });
@@ -14,13 +15,18 @@ require([
     'underscore',
     'backbone',
     'domReady',
-    'utils',
+    'dateformat',
     'jquery-plugins'
-], function($, _, Backbone, domReady, Utils) {
+], function($, _, Backbone, domReady) {
     // test modules
     console.log('index.js');
     // console.log('underscore', _.each);
     // console.log('backbone', Backbone.Model);
+
+    var getYmdHM = function(time) {
+        var dt = new Date(time * 1000);
+        return dt.format('yyyy-mm-dd HH:MM');
+    }
 
     // define views
     var PanelView = Backbone.View.extend({
@@ -377,7 +383,7 @@ require([
                     _this.receiveMessages(json);
                     if (json.messages.length > 0)
                         _this.separateMessages(
-                            'last message was send on:&nbsp&nbsp' + Utils.getYmdHM(_this.lastMessage.time));
+                            'last message was send on:&nbsp&nbsp' + getYmdHM(_this.lastMessage.time));
                 }
             });
         },
@@ -427,8 +433,7 @@ require([
              */
             var lastMessage = this.lastMessage,
                 date = new Date(message.time * 1000),
-                hourtime = date.getHours() + ':' + date.getMinutes(),
-                getYmdHM = Utils.getYmdHM;
+                hourtime = date.format('HH:MM');
 
 
             var needDialog = true, dialog$,
@@ -481,7 +486,6 @@ require([
         // debug
         window.panelView = panelView;
         window.chatView = chatView;
-        window.Utils = Utils;
 
         // load recents
         chatView.getRecents();
