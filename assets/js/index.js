@@ -30,7 +30,8 @@ require([
             'click a.tip': 'showPasswordInput',
             'click a.cancel': 'hidePasswordInput',
             'click .colors a': 'selectColor',
-            'click .userinfo .logout': 'logout'
+            'click .userinfo .logout': 'logout',
+            'mouseover .title.sec2': 'showPoweredBy'
         },
 
         initialize: function() {
@@ -39,6 +40,7 @@ require([
             this.status('Loading', 1, 'info');
 
             this.renderColor();
+            // this.activePoweredBy();
 
             this.inputWidth= '115px',
             this.$username = this.$('input[name="username"]'),
@@ -145,6 +147,26 @@ require([
                 });
             }
 
+        },
+
+        // activePoweredBy: function() {
+        showPoweredBy: function() {
+            var parent = this.$('.mouseWrapper'),
+                toShow = this.$('.pb'),
+                _this = this;
+
+            if (toShow.is(':visible'))
+                return;
+
+            toShow.slideDown(500, function() {
+                $(window).bind('mousemove', function(e2) {
+                    var target = $(e2.target);
+                    if (target.get(0) !== parent.get(0) && parent.has(target).length === 0 && toShow.is(':visible')) {
+                        $(window).unbind('mousemove');
+                        toShow.slideUp(500);
+                    }
+                });
+            });
         },
 
         login: function() {

@@ -27,6 +27,40 @@ USERNAME_VALIDATOR = RegexValidator(4, 16, 'must be words in 4~16 range',
     regex=re.compile(ur'[a-zA-Z0-9\u2E80-\u9FFF]+'))
 
 
+class BaseHandler(_BaseHandler):
+
+    db = conns.get('mongodb', 'master').chatroom
+
+    HTTP_STATUS_EXCEPTIONS = {
+        # 400: (errors.ParametersInvalid, errors.OperationNotAllowed),
+        (errors.ParametersInvalid, errors.OperationNotAllowed): '_handle_400',
+        # 401: (errors.AuthenticationNotPass),
+        (errors.AuthenticationNotPass): '_handle_401',
+        # 404: (errors.ObjectNotFound)
+        (errors.ObjectNotFound): '_handle_404'
+    }
+
+    def _handle_400(self, e):
+        self.json_error(400, e)
+
+    def _handle_401(self, e):
+        self.json_error(401, e)
+
+    def _handle_404(self, e):
+        self.json_error(404, e)
+
+
+def load_messages(after=None, limit=15):
+    print 'load messages'
+    db = BaseHandler.db
+    if after:
+        cur = db.messages.find({'time': {'$lt': after['time']}})
+    else:
+        cur = db.messages.find()
+    cur = cur.sort('time', -1).limit(limit)
+    return list(cur)
+
+
 class AuthMixin(object):
 
     def authenticate(self):
@@ -107,13 +141,14 @@ class MessageMixin(object):
      - hourtime
      - datetime
     """
-    def create_message(self, content):
+    def create_message(self, content, color):
         t = time.time()
         dt = datetime.datetime.fromtimestamp(t)
         msg = {
             '_id': ObjectId(),
             'username': self.user['username'],
             'content': content,
+            'color': color,
             'time': t,
             'datetime': dt.strftime('%Y-%m-%d %H:%M:%S')
         }
@@ -129,7 +164,7 @@ class MessageMixin(object):
 
 class PollMixin(object):
     waiters = set()
-    cache = []
+    cache = load_messages()
     cache_size = 200
     _online_users_numbers = 0
 
@@ -147,7 +182,11 @@ class PollMixin(object):
         if self.request.connection.stream.closed():
             return
 
-        if isinstance(msgs, dict):
+        if isinstance(msgs, list):
+            # as messages are stored in time-desc sequence,
+            # need to reverse it before send to client
+            msgs.reverse()
+        else:
             msgs = [msgs, ]
 
         d = {
@@ -173,34 +212,11 @@ class PollMixin(object):
         # clear waiters
         cls.waiters = set()
 
-    def append_to_cache(self, msg):
+    def insert_to_cache(self, msg):
         cls = PollMixin
-        cls.cache.append(msg)
+        cls.cache.insert(0, msg)
         if len(cls.cache) > self.cache_size:
-            cls.cache = cls.cache[-self.cache_size:]
-
-
-class BaseHandler(_BaseHandler):
-
-    db = conns.get('mongodb', 'master').chatroom
-
-    HTTP_STATUS_EXCEPTIONS = {
-        # 400: (errors.ParametersInvalid, errors.OperationNotAllowed),
-        (errors.ParametersInvalid, errors.OperationNotAllowed): '_handle_400',
-        # 401: (errors.AuthenticationNotPass),
-        (errors.AuthenticationNotPass): '_handle_401',
-        # 404: (errors.ObjectNotFound)
-        (errors.ObjectNotFound): '_handle_404'
-    }
-
-    def _handle_400(self, e):
-        self.json_error(400, e)
-
-    def _handle_401(self, e):
-        self.json_error(401, e)
-
-    def _handle_404(self, e):
-        self.json_error(404, e)
+            cls.cache = cls.cache[:self.cache_size]
 
 
 class AuthedHandler(BaseHandler, AuthMixin):
@@ -229,7 +245,7 @@ class ChatMessagesRecentsHdr(BaseHandler, PollMixin):
             self.send_messages([])
         else:
             if len(cache) > 10:
-                msgs = cache[-10:]
+                msgs = cache[:10]
             else:
                 msgs = cache
             self.send_messages(msgs)
@@ -259,14 +275,14 @@ class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin, UserMixin):
 
         if id and len(PollMixin.cache) != 0:
             # need to load some recent messages
-            if cls.cache[-1]['_id'] != id:
+            if cls.cache[0]['_id'] != id:
                 pos = None
                 for i in xrange(len(cls.cache)):
                     if cls.cache[i]['_id'] == id:
                         pos = i
                         break
                 if pos is not None:
-                    self.send_messages(cls.cache[pos:])
+                    self.send_messages(cls.cache[:pos])
                     return
                 else:
                     logging.warning('Could positioning the last message in cache, response error')
@@ -298,11 +314,10 @@ class ChatMessagesHdr(AuthedHandler, MessageMixin, PollMixin):
         This method is not asynchronous, so each message
         append to PollMixin.cache is in time sequence
         """
-        msg = self.create_message(self.params.content)
-        # extra value
-        msg['color'] = self.user['color']
+        msg = self.create_message(self.params.content, self.user['color'])
+
         # add message to message cache
-        self.append_to_cache(msg)
+        self.insert_to_cache(msg)
 
         self.new_message(msg)
 

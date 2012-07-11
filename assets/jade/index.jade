@@ -3,6 +3,16 @@ html
   head
     title Chatroom
     link(rel='stylesheet', href='{{ static_url(\'css/index.css\') }}')
+    script
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-33304637-1']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
     script(src='/static/js/libs/require.js', data-main='/static/js/index.js')
 
 body
@@ -63,6 +73,33 @@ body
           b.number
         .users(style='display: none;')
           //- .item(username='reorx') R
+
+      .mouseWrapper
+        .title.folded.sec2
+          span.text About
+          span.arrow
+
+        .about
+          .p Source
+            a(href='#') github
+          .p.pb(style='display: none;') Powered by
+            ul
+              li
+                a(href='http://tornadoweb.org/') Tornado
+              li
+                a(href='http://www.mongodb.org/') MongoDB
+              li
+                a(href='https://github.com/visionmedia/jade') Jade
+              li
+                a(href='http://learnboost.github.com/stylus/') Stylus
+              li
+                a(href='http://backbonejs.org/') Backbone
+                span.and &
+                a(href='http://underscorejs.org/') Underscore
+              li
+                a(href='http://jquery.com/') jQuery
+              li
+                a(href='http://docs.fabfile.org/en/1.4.3/index.html') Fabric
 
     #chat
       .ruler

@@ -8,6 +8,8 @@ Design for simple and convenience chatting
 TODO
 ----
 
+ - load more recents
+
  - google analysis
 
  - old messages on restart

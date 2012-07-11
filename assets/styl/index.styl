@@ -35,6 +35,7 @@ html, body
     bottom 160px
     background #fff
     overflow-y scroll
+    overflow-x hidden
     .body
       position relative
       z-index 9
@@ -67,7 +68,7 @@ html, body
               // border-right 1px solid #C4D1D7
             .datetime
               position absolute
-              right 0; top 0
+              right 5px; top 0
               padding-left 10px
               width 40px
               height 20px
@@ -90,13 +91,15 @@ html, body
     height 150px
 
     textarea
-      position absolute
-      left 10px; right 10px; top 0
-      bottom 50px
+      width 628px
+      height 100px
+      padding 5px
+      margin 0 10px
       border 1px solid #aaa
       border-radius 2px
       font-size 15px
-      padding 5px
+    textarea:focus
+      outline 1px solid #E0C458
 
 #panel
   float right
@@ -117,7 +120,7 @@ html, body
   .title .arrow
     top 31px
 
-  p
+  p, .p
     font-size 15px
     color #444
     margin 0 0 10px 0
@@ -296,6 +299,24 @@ html, body
         border 1px solid #aaa
         text-align center
         color #0BB038
+
+  .about
+    ul
+      margin 0
+      margin-top 5px
+      padding-left 30px
+      list-style-type lower-greek
+      font-size 12px
+      color #770C0C
+      li a
+        margin-left 0
+        color #064372
+        text-decoration none
+        font-size 13px
+        font-style normal
+      span.and
+        margin 0 5px
+        font-size 10px
 
 
 // Effects
