@@ -3,7 +3,7 @@
 import re
 import copy
 import time
-import datetime
+# import datetime
 import logging
 from bson.objectid import ObjectId
 from tornado.web import asynchronous
@@ -143,14 +143,14 @@ class MessageMixin(object):
     """
     def create_message(self, content, color):
         t = time.time()
-        dt = datetime.datetime.fromtimestamp(t)
+        # dt = datetime.datetime.fromtimestamp(t)
         msg = {
             '_id': ObjectId(),
             'username': self.user['username'],
             'content': content,
             'color': color,
             'time': t,
-            'datetime': dt.strftime('%Y-%m-%d %H:%M:%S')
+            # 'datetime': dt.strftime('%Y-%m-%d %H:%M:%S')
         }
         self.save_message(msg)
         return msg
@@ -185,6 +185,9 @@ class PollMixin(object):
         if isinstance(msgs, list):
             # as messages are stored in time-desc sequence,
             # need to reverse it before send to client
+            # NOTE directly call reverse will change PollMixin.cache
+            # which may be the source of msgs
+            msgs = copy.copy(msgs)
             msgs.reverse()
         else:
             msgs = [msgs, ]

@@ -426,7 +426,6 @@ require([
              *  - username
              *  - content
              *  - time
-             *  - datetime
              *
              *  - hourtime (extra)
              *  - domId (extra)
