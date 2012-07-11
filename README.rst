@@ -10,6 +10,8 @@ TODO
 
  - periodic mute for chatting too quickly
 
+ - nginx static files expire date
+
  - system message
 
  - .roominfo users slide show
