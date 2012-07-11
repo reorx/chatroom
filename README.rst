@@ -8,13 +8,7 @@ Design for simple and convenience chatting
 TODO
 ----
 
- - load more recents
-
- - google analysis
-
- - old messages on restart
-
- - shut up
+ - periodic mute for chatting too quickly
 
  - system message
 
