@@ -26,7 +26,7 @@ require([
     var getYmdHM = function(time) {
         var dt = new Date(time * 1000);
         return dt.format('yyyy-mm-dd HH:MM');
-    }
+    };
 
     // define views
     var PanelView = Backbone.View.extend({

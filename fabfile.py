@@ -21,9 +21,7 @@ def push():
 
 
 @hosts(HOST)
-def update():
-    push()
-
+def poll():
     with cd('/root/projects/torext'):
         res = run('git pull')
 
@@ -36,6 +34,9 @@ def update():
             abort('make failed, abort')
         run('cp static /home/admin -r')
 
+
+@hosts(HOST)
+def restart_supervisor():
     with cd('/root/supervisor'):
         run('cp /root/projects/chatroom/supervisor.chatroom.conf conf.d/')
         run('kill `cat supervisord.pid`')
@@ -43,11 +44,34 @@ def update():
         if res.failed:
             abort('restart supervisor failed, abort')
 
+
+@hosts(HOST)
+def restart_nginx():
     with cd('/etc/nginx'):
         run('cp /root/projects/chatroom/nginx.chatroom.conf conf.d/')
         res = run('service nginx restart')
         if res.failed:
             abort('restart nginx failed, abort')
+
+
+@hosts(HOST)
+def update():
+    push()
+
+    poll()
+
+    restart_supervisor()
+
+    restart_nginx()
+
+
+@hosts(HOST)
+def update_static():
+    push()
+
+    poll()
+
+    restart_nginx()
 
 
 @hosts(HOST)
@@ -58,4 +82,9 @@ def drop_db():
 
 @hosts(HOST)
 def backup_db():
+    pass
+
+
+@hosts(HOST)
+def sync_logs():
     pass

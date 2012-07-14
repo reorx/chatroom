@@ -386,6 +386,13 @@ class UsersMeHdr(AuthedHandler, PollMixin):
         self.json_write(d)
 
 
+class AsyncTestHdr(BaseHandler):
+    @asynchronous
+    def get(self):
+        print '---- async test ----'
+        time.sleep(30)
+
+
 handlers = [
     (r"/", MainHandler),
     (r"/auth/login", LoginHdr),
@@ -395,6 +402,8 @@ handlers = [
     (r"/chat/messages/updates", ChatMessagesUpdateHdr),
     (r"/room", RoomHdr),
     (r"/users/me", UsersMeHdr),
+
+    (r"/test/async", AsyncTestHdr),
 ]
 
 
