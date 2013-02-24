@@ -1,44 +1,47 @@
 #!/usr/bin/env python
 
-import re
+import os
 import copy
 import time
+from hashlib import md5
 # import datetime
 import logging
 from bson.objectid import ObjectId
-from tornado.web import asynchronous
+import tornado.web
 
-import torext
-from torext import errors
+from torext import errors, params
 from torext.app import TorextApp
-from torext.conns import conns
-from torext.lib.hashs import md5_string
-from torext.handlers import _BaseHandler, define_api
-from torext.lib.validator import RegexValidator
-
-import settings
-torext.initialize(settings)
+from torext.utils import _json
+from torext.handlers import BaseHandler as _BaseHandler
+from pymongo import Connection
 
 
-PASSWORD_VALIDATOR = RegexValidator(6, 16, 'must be words&symbols in 6~16 range',
-    regex=re.compile(r'^[A-Za-z0-9@#$%^&+=]+$'))
+db = Connection(os.environ.get('MONGOHQ_URL', 'mongodb://localhost:27017'))['chatroom']
 
-USERNAME_VALIDATOR = RegexValidator(4, 16, 'must be words in 4~16 range',
-    regex=re.compile(ur'[a-zA-Z0-9\u2E80-\u9FFF]+'))
+
+md5_string = lambda x: md5(x).hexdigest()
 
 
 class BaseHandler(_BaseHandler):
+    db = db
 
-    db = conns.get('mongodb', 'master').chatroom
-
-    HTTP_STATUS_EXCEPTIONS = {
-        # 400: (errors.ParametersInvalid, errors.OperationNotAllowed),
-        (errors.ParametersInvalid, errors.OperationNotAllowed): '_handle_400',
-        # 401: (errors.AuthenticationNotPass),
-        (errors.AuthenticationNotPass): '_handle_401',
-        # 404: (errors.ObjectNotFound)
-        (errors.ObjectNotFound): '_handle_404'
+    EXCEPTION_HANDLERS = {
+        (errors.ParamsInvalidError, errors.OperationNotAllowed): '_handle_400',
+        errors.AuthenticationNotPass: '_handle_401',
+        errors.ObjectNotFound: '_handle_404'
     }
+
+    def json_error(self, code, error=None):
+        msg = {'code': code}
+        if isinstance(error, str):
+            msg['error'] = error
+        else:
+            msg['error'] = str(error)
+            logging.info('Get exc to write: %s - %s' %
+                         (error.__class__.__name__, error))
+
+        self.set_status(code)
+        self.write_json(msg, code=code)
 
     def _handle_400(self, e):
         self.json_error(400, e)
@@ -49,34 +52,24 @@ class BaseHandler(_BaseHandler):
     def _handle_404(self, e):
         self.json_error(404, e)
 
-
-def load_messages(after=None, limit=15):
-    print 'load messages'
-    db = BaseHandler.db
-    if after:
-        cur = db.messages.find({'time': {'$lt': after['time']}})
-    else:
-        cur = db.messages.find()
-    cur = cur.sort('time', -1).limit(limit)
-    return list(cur)
+    @property
+    def json_encode(self):
+        return _json
 
 
 class AuthMixin(object):
-
     def authenticate(self):
         user_id = self.get_secure_cookie('user_id')
-        if user_id:
-            try:
-                user_id = ObjectId(user_id)
-            except:
-                pass
-            else:
-                cur = self.db.users.find({'_id': user_id})
-                if cur.count() > 0:
-                    self.user = cur.next()
-                    return
-
-        raise errors.AuthenticationNotPass('Authentication not pass')
+        if not user_id:
+            raise errors.AuthenticationNotPass('could not get user_id')
+        try:
+            user_id = ObjectId(user_id)
+        except:
+            raise errors.AuthenticationNotPass('could not transform user_id in to ObjectId')
+        cur = self.db.users.find({'_id': user_id})
+        if not cur.count():
+            raise errors.AuthenticationNotPass('could not find user by user_id')
+        self.user = cur.next()
 
     def authorize(self, user):
         self.set_secure_cookie('user_id', str(user['_id']))
@@ -93,13 +86,13 @@ class UserMixin(object):
         color
         offline_time
     """
-    def generate_password(self, raw):
-        salt = 'Est Sularus oth Mithas'
-        return md5_string(raw + salt)
+    password_salt = 'Est Sularus oth Mithas'
 
-    def check_password(self, raw, pwd):
-        salt = 'Est Sularus oth Mithas'
-        return md5_string(raw + salt) == pwd
+    def generate_password(self, raw):
+        return md5_string(raw + self.password_salt)
+
+    def check_password(self, raw, password):
+        return md5_string(raw + self.password_salt) == password
 
     def create_user(self, username, color, password=None):
         user = {
@@ -162,6 +155,16 @@ class MessageMixin(object):
         return _id
 
 
+def load_messages(after=None, limit=15):
+    print 'load messages'
+    if after:
+        cur = db.messages.find({'time': {'$lt': after['time']}})
+    else:
+        cur = db.messages.find()
+    cur = cur.sort('time', -1).limit(limit)
+    return list(cur)
+
+
 class PollMixin(object):
     waiters = set()
     cache = load_messages()
@@ -197,7 +200,8 @@ class PollMixin(object):
             'online_users_number': PollMixin._online_users_numbers
         }
 
-        self.json_write(d)
+        self.write_json(d)
+        self.finish()
 
     def new_message(self, msg):
         cls = PollMixin
@@ -225,20 +229,13 @@ class PollMixin(object):
 class AuthedHandler(BaseHandler, AuthMixin):
     PREPARES = ['auth']
 
-    def _prepare_auth(self):
+    def prepare_auth(self):
         self.authenticate()
 
 
-class MainHandler(BaseHandler):
+class HomeHandler(BaseHandler):
     def get(self):
         self.render("index.html")
-
-
-def _validate_objectid(v):
-    try:
-        return ObjectId(v)
-    except:
-        raise errors.ValidationError('Not a valid objectid string')
 
 
 class ChatMessagesRecentsHdr(BaseHandler, PollMixin):
@@ -254,24 +251,32 @@ class ChatMessagesRecentsHdr(BaseHandler, PollMixin):
             self.send_messages(msgs)
 
 
+class MessagesUpdateParams(params.ParamSet):
+    last_message_id = params.Field()
+    anonymous = params.Field()
+
+    def validate_last_message_id(self, value):
+        try:
+            value = ObjectId(value)
+        except:
+            raise errors.ValidationError('Not a valid objectid string: %s' % value)
+        return value
+
+
 class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin, UserMixin):
-    @asynchronous
-    @define_api([
-        # ('recents', False)
-        ('last_message_id', False, _validate_objectid),
-        ('anonymous', False)
-    ])
+    @tornado.web.asynchronous
+    @MessagesUpdateParams.validation_required
     def post(self):
         print '/chat/messages/updates params', self.params
 
-        if not 'anonymous' in self.params:
+        if not 'anonymous' in self.params.data:
             try:
                 self.authenticate()
                 print 'user connected:', self.user['username']
             except errors.AuthenticationNotPass:
                 pass
 
-        self.wait_for_messages(id=self.params.get('last_message_id', None))
+        self.wait_for_messages(id=self.params.data.get('last_message_id', None))
 
     def wait_for_messages(self, id=None):
         cls = PollMixin
@@ -309,9 +314,9 @@ class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin, UserMixin):
 
 
 class ChatMessagesHdr(AuthedHandler, MessageMixin, PollMixin):
-    @define_api([
-        ('content', True)
-    ])
+    @params.define_params({
+        'content': params.Field(required=True)
+    })
     def post(self):
         """
         This method is not asynchronous, so each message
@@ -325,15 +330,20 @@ class ChatMessagesHdr(AuthedHandler, MessageMixin, PollMixin):
         self.new_message(msg)
 
 
+class LoginParams(params.ParamSet):
+    username = params.RegexField('username must be words in 4~16 range',
+                                 pattern=ur'[a-zA-Z0-9\u2E80-\u9FFF]+',
+                                 required=True, length=(4, 16))
+    password = params.RegexField('password must be words&symbols in 6~16 range',
+                                 pattern=r'^[A-Za-z0-9@#$%^&+=]+$')
+    color = params.Field(required=True)
+
+
 class LoginHdr(BaseHandler, AuthMixin, UserMixin, PollMixin):
     def get(self):
         self.render('login.html', message='Welcome')
 
-    @define_api([
-        ('username', True, USERNAME_VALIDATOR),
-        ('color', True),
-        ('password', False, PASSWORD_VALIDATOR)
-    ])
+    @LoginParams.validation_required
     def post(self):
         print 'username', self.params.username
         print 'all users', [i.user for i in PollMixin.waiters if hasattr(i, 'user')]
@@ -343,7 +353,7 @@ class LoginHdr(BaseHandler, AuthMixin, UserMixin, PollMixin):
         cur = self.db.users.find({'username_lower': self.params.username.lower()})
         if cur.count() == 0:
             user = self.create_user(self.params.username, self.params.color,
-                password=self.params.get('password', None))
+                                    password=self.params.data.get('password', None))
         else:
             user = cur.next()
 
@@ -363,7 +373,7 @@ class LoginHdr(BaseHandler, AuthMixin, UserMixin, PollMixin):
         print user
 
         self.authorize(user)
-        self.json_write(user)
+        self.write_json(user)
 
 
 class LogoutHdr(BaseHandler):
@@ -376,25 +386,34 @@ class RoomHdr(BaseHandler, PollMixin):
         info = {
             'online_users': self.get_online_users()
         }
-        self.json_write(info)
+        self.write_json(info)
 
 
 class UsersMeHdr(AuthedHandler, PollMixin):
     def get(self):
         d = copy.copy(self.user)
         d['is_online'] = self.is_online(d['username']) and True or False
-        self.json_write(d)
+        self.write_json(d)
 
 
 class AsyncTestHdr(BaseHandler):
-    @asynchronous
+    @tornado.web.asynchronous
     def get(self):
         print '---- async test ----'
         time.sleep(30)
 
 
-handlers = [
-    (r"/", MainHandler),
+app = TorextApp()
+app.set_root_path()
+print 'root', app.root_path
+app.update_settings(dict(
+    COOKIE_SECRET='P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc=',
+    TEMPLATE_PATH='templates',
+    PORT=os.environ.get('PORT', '8001')
+))
+
+app.route_many([
+    (r"/", HomeHandler),
     (r"/auth/login", LoginHdr),
     (r"/auth/logout", LogoutHdr),
     (r"/chat/messages", ChatMessagesHdr),
@@ -404,11 +423,8 @@ handlers = [
     (r"/users/me", UsersMeHdr),
 
     (r"/test/async", AsyncTestHdr),
-]
+])
 
-
-app = TorextApp(handlers)
 
 if __name__ == "__main__":
-
     app.run()
