@@ -19,6 +19,7 @@ from pymongo import Connection
 
 
 mongodb_uri = os.getenv('MONGOHQ_URL', 'mongodb://localhost:27017')
+logging.info('mongodb uri: %s', mongodb_uri)
 try:
     db = Connection(mongodb_uri)['chatroom']
 except pymongo.errors.ConnectionFailure, e:
