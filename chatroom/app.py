@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import copy
 import time
 from hashlib import md5
@@ -13,10 +14,18 @@ from torext import errors, params
 from torext.app import TorextApp
 from torext.utils import _json
 from torext.handlers import BaseHandler as _BaseHandler
+
+import pymongo.errors
 from pymongo import Connection
 
 
-db = Connection(os.environ.get('MONGOHQ_URL', 'mongodb://localhost:27017'))['chatroom']
+mongodb_uri = os.getenv('MONGOHQ_URL', 'mongodb://localhost:27017')
+logging.info('mongodb uri: %s', mongodb_uri)
+try:
+    db = Connection(mongodb_uri)['chatroom']
+except pymongo.errors.ConnectionFailure, e:
+    logging.error('mongodb connection failed: %s, %s', mongodb_uri, e)
+    sys.exit(1)
 
 
 md5_string = lambda x: md5(x).hexdigest()
