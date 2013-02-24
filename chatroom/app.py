@@ -28,10 +28,10 @@ app.update_settings(dict(
 app.setup()
 
 
-mongodb_uri = os.getenv('MONGOHQ_URL', 'mongodb://localhost:27017')
+mongodb_uri = os.getenv('MONGOHQ_URL', 'mongodb://localhost:27017/chatroom')
 logging.info('mongodb uri: %s', mongodb_uri)
 try:
-    db = Connection(mongodb_uri)['chatroom']
+    db = Connection(mongodb_uri)[mongodb_uri.split('/')[-1]]
 except pymongo.errors.ConnectionFailure, e:
     logging.error('mongodb connection failed: %s, %s', mongodb_uri, e)
     sys.exit(1)
