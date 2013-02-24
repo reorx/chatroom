@@ -9,14 +9,23 @@ from hashlib import md5
 import logging
 from bson.objectid import ObjectId
 import tornado.web
-
 from torext import errors, params
 from torext.app import TorextApp
 from torext.utils import _json
 from torext.handlers import BaseHandler as _BaseHandler
-
 import pymongo.errors
 from pymongo import Connection
+
+
+app = TorextApp()
+app.set_root_path()
+print 'root', app.root_path
+app.update_settings(dict(
+    COOKIE_SECRET='P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc=',
+    TEMPLATE_PATH='templates',
+    PORT=os.environ.get('PORT', '8001')
+))
+app.setup()
 
 
 mongodb_uri = os.getenv('MONGOHQ_URL', 'mongodb://localhost:27017')
@@ -411,15 +420,6 @@ class AsyncTestHdr(BaseHandler):
         print '---- async test ----'
         time.sleep(30)
 
-
-app = TorextApp()
-app.set_root_path()
-print 'root', app.root_path
-app.update_settings(dict(
-    COOKIE_SECRET='P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc=',
-    TEMPLATE_PATH='templates',
-    PORT=os.environ.get('PORT', '8001')
-))
 
 app.route_many([
     (r"/", HomeHandler),
