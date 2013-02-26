@@ -377,13 +377,13 @@ class LoginHdr(BaseHandler, AuthMixin, UserMixin, PollMixin):
 
             # if user has password
             if not user['is_anonymous']:
-                if not 'password' in self.params:
+                if not 'password' in self.params.data:
                     raise errors.AuthenticationNotPass('Need password')
                 if not self.check_password(self.params.password, user['password']):
                     raise errors.AuthenticationNotPass('Password invalid')
             # add password to this user
             else:
-                if 'password' in self.params:
+                if 'password' in self.params.data:
                     user['is_anonymous'] = False
                     user['password'] = self.generate_password(self.params.password)
                     self.save_user(user)
