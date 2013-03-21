@@ -340,7 +340,7 @@ class ChatMessagesHdr(AuthedHandler, MessageMixin, PollMixin):
         This method is not asynchronous, so each message
         append to PollMixin.cache is in time sequence
         """
-        msg = self.create_message(self.params.content, self.user['color'])
+        msg = self.create_message(self.params.content.decode('utf8'), self.user['color'])
 
         # add message to message cache
         self.insert_to_cache(msg)
