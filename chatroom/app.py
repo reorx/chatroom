@@ -4,32 +4,48 @@ import os
 import sys
 import copy
 import time
-from hashlib import md5
-# import datetime
 import logging
+from hashlib import md5
 from bson.objectid import ObjectId
-import tornado.web
+from tornado.web import asynchronous
 from torext import errors, params
 from torext.app import TorextApp
-from torext.utils import _json
 from torext.handlers import BaseHandler as _BaseHandler
 import pymongo.errors
 from pymongo import Connection
+import json
 
 
-app = TorextApp()
-app.set_root_path()
-print 'root', app.root_path
-app.update_settings(dict(
-    COOKIE_SECRET='P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc=',
-    TEMPLATE_PATH='templates',
-    PORT=os.environ.get('PORT', '8001')
-))
+app = TorextApp(extra_settings={
+    'COOKIE_SECRET': 'P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc=',
+    'TEMPLATE_PATH': 'templates',
+    'PORT': os.environ.get('PORT', '8001')
+})
+
+#app.set_root_path()
+#print 'root', app.root_path
+
 app.setup()
 
 
+def _handle_object_for_json(obj):
+    if isinstance(obj, ObjectId):
+        return str(obj)
+
+
+@app.register_json_encoder
+def encode_json(data):
+    return json.dumps(data, default=_handle_object_for_json)
+
+
 mongodb_uri = os.getenv('MONGOHQ_URL', 'mongodb://localhost:27017/chatroom')
-logging.info('mongodb uri: %s', mongodb_uri)
+
+if app.settings['DEBUG']:
+    logging.info('Dev env')
+else:
+    logging.info('Heroku env')
+    logging.info('mongodb uri: %s', mongodb_uri)
+
 try:
     db = Connection(mongodb_uri)[mongodb_uri.split('/')[-1]]
 except pymongo.errors.ConnectionFailure, e:
@@ -46,7 +62,7 @@ class BaseHandler(_BaseHandler):
     EXCEPTION_HANDLERS = {
         (errors.ParamsInvalidError, errors.OperationNotAllowed): '_handle_400',
         errors.AuthenticationNotPass: '_handle_401',
-        errors.ObjectNotFound: '_handle_404'
+        #errors.ObjectNotFound: '_handle_404'
     }
 
     def json_error(self, code, error=None):
@@ -69,10 +85,6 @@ class BaseHandler(_BaseHandler):
 
     def _handle_404(self, e):
         self.json_error(404, e)
-
-    @property
-    def json_encode(self):
-        return _json
 
 
 class AuthMixin(object):
@@ -282,7 +294,7 @@ class MessagesUpdateParams(params.ParamSet):
 
 
 class ChatMessagesUpdateHdr(BaseHandler, AuthMixin, PollMixin, UserMixin):
-    @tornado.web.asynchronous
+    @asynchronous
     @MessagesUpdateParams.validation_required
     def post(self):
         print '/chat/messages/updates params', self.params
@@ -415,7 +427,7 @@ class UsersMeHdr(AuthedHandler, PollMixin):
 
 
 class AsyncTestHdr(BaseHandler):
-    @tornado.web.asynchronous
+    @asynchronous
     def get(self):
         print '---- async test ----'
         time.sleep(30)

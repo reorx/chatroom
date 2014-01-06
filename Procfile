@@ -1,1 +1,1 @@
-web: python chatroom/app.py
+web: python chatroom/app.py --DEBUG=False
