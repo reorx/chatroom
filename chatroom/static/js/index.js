@@ -475,7 +475,7 @@ require([
             } else {
                 this.$('.dialog:last').find('.messages').append(message$);
             }
-            this.$('.chats').animate({scrollTop: this.$('.chats').height()}, 300);
+            this.$('.chats').stop(true, false).animate({scrollTop: this.$('.chats .body').height()}, 300);
 
             this.lastMessage = message;
         }
